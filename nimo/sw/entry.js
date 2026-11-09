@@ -271,6 +271,9 @@ async function parseBody(request) {
         const body = {}; let file;
         for (const [k, v] of fd.entries()) {
             if (typeof v === 'string') body[k] = v;
+            // An empty <input type=file> is sent as a nameless, empty part. Multer ignores those, so SillyTavern
+            // expects no file at all (e.g. the character editor autosave keeps the current picture).
+            else if (!v.name && !v.size) continue;
             else if (!file) {
                 const name = crypto.randomUUID().replace(/-/g, '');
                 const p = '/data/_uploads/' + name;
@@ -294,6 +297,21 @@ async function parseBody(request) {
 
 function json(status, obj) { return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } }); }
 
+// SillyTavern's sentencepiece loader keeps a half-built tokenizer when its first load fails, so a lazy
+// default file can't be fetched on demand and retried: download the model before the request runs.
+const SPP_TOKENIZERS = ['llama', 'nerdstash', 'nerdstash_v2', 'mistral', 'yi', 'gemma', 'jamba'];
+async function preloadTokenizer(url) {
+    const m = url.pathname.match(/^\/api\/tokenizers\/([^/]+)\//);
+    if (!m) return;
+    let names = SPP_TOKENIZERS.includes(m[1]) ? [m[1]] : [];
+    if (m[1] === 'openai') {
+        const model = (url.searchParams.get('model') || '').toLowerCase();
+        names = SPP_TOKENIZERS.filter((n) => n !== 'llama' || !/llama-?3/.test(model)).filter((n) => model.includes(n));
+    }
+    const paths = names.map((n) => `/src/tokenizers/${n}.model`).filter((p) => vfs.files.has(p));
+    if (paths.length) await vfs.resolveRefs(paths).catch((e) => console.warn('[nimo] tokenizer preload failed', e));
+}
+
 async function handleApp(request) {
     try { await ensureBooted(); } catch (e) {
         if (e.locked) return json(401, { error: 'locked', nimo: 'login-required' });
@@ -304,6 +322,7 @@ async function handleApp(request) {
     request.headers.forEach((v, k) => { headers[k] = v; });
     const { body, file, bad } = await parseBody(request);
     if (bad) return new Response('Bad JSON', { status: 400 });
+    await preloadTokenizer(url);
 
     for (let attempt = 0; attempt < 25; attempt++) {
         const req = createReq({ method: request.method, url: url.href, headers, body, file, user: null, signal: request.signal });
