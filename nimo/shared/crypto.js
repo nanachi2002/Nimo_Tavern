@@ -104,8 +104,12 @@ export async function idbPut(dbName, store, key, val) {
 }
 export async function saveKeys(record) { await idbPut(KEY_DB, 'keys', 'current', record); }
 export async function loadKeys() { try { return await idbGet(KEY_DB, 'keys', 'current'); } catch { return null; } }
+/** Removes everything this site stored in the browser: keys, encrypted cache, SillyTavern's own caches. */
 export async function wipeLocal() {
-    for (const name of ['nimo-keys', 'nimo-cache']) {
+    const names = new Set(['nimo-keys', 'nimo-cache']);
+    try { for (const d of await indexedDB.databases()) if (d.name) names.add(d.name); } catch { /* Firefox < 126 */ }
+    for (const name of names) {
         await new Promise((res) => { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); });
     }
+    try { self.localStorage?.clear(); self.sessionStorage?.clear(); } catch { /* not available in workers */ }
 }

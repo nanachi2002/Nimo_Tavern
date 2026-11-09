@@ -119,7 +119,20 @@ self.addEventListener('nimo-logout', () => { lock(true); });
 let flushTimer = null;
 function scheduleFlush() {
     clearTimeout(flushTimer);
-    flushTimer = setTimeout(() => store?.flush(), 150);
+    flushTimer = setTimeout(() => store?.flush().then(broadcastPending), 150);
+    broadcastPending();
+}
+
+// Tell open tabs whether encrypted writes are still uploading (they warn before closing).
+let lastPending = -1, pendingTimer = null;
+function broadcastPending() {
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(async () => {
+        const n = vfs.dirty.size + (store?.uploading ? 1 : 0);
+        if ((n > 0) === (lastPending > 0)) return;
+        lastPending = n;
+        for (const c of await self.clients.matchAll({ type: 'window' })) c.postMessage({ type: 'nimo-pending', n });
+    }, 50);
 }
 
 let syncTimer = null;
@@ -257,7 +270,10 @@ async function handleStatic(request) {
     const cache = await caches.open(STATIC_CACHE);
     const hit = await cache.match(request, { ignoreSearch: false });
     if (hit) return hit;
-    const r = await fetch(request);
+    // Per-build query string: a fresh cache key at the CDN and in the browser HTTP cache for each release.
+    const u = new URL(request.url);
+    u.searchParams.set('nimo_v', BUILD);
+    const r = await fetch(u, { credentials: 'same-origin' });
     if (r.ok && r.type === 'basic') cache.put(request, r.clone()).catch(() => { });
     return r;
 }
@@ -272,7 +288,7 @@ self.addEventListener('fetch', (event) => {
     if (isAppPath(p)) {
         event.respondWith(handleApp(request).then((r) => {
             // Make sure writes are encrypted+uploaded even if the SW would otherwise be stopped.
-            if (store && vfs.dirty.size) event.waitUntil(store.flush()); // upload right away; flushes are serialized so bursts batch up
+            if (store && vfs.dirty.size) event.waitUntil(store.flush().then(broadcastPending)); // upload right away; flushes are serialized so bursts batch up
             return r;
         }));
         return;

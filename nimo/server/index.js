@@ -432,10 +432,18 @@ function requireClientHeaderRelay(req, res, next) { if (!req.headers['x-nimo-rel
 
 // ---------------------------------------------------------------------------
 // Pages & static files
-const page = (name) => path.join(NIMO_PAGES, name);
+const BUILD = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(here, '../dist/build.json'), 'utf8')).build; } catch { return 'dev'; } })();
+const PAGES = new Map();
+function sendPage(res, name) {
+    // Pages reference assets as ...?v={{V}} so browsers/CDN never mix versions across deploys.
+    let html = PAGES.get(name);
+    if (!html) { html = fs.readFileSync(path.join(NIMO_PAGES, name), 'utf8').replaceAll('{{V}}', BUILD); PAGES.set(name, html); }
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('html').send(html);
+}
 function readIndex() {
     let html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
-    html = html.replace('<head>', '<head>\n    <script src="/nimo/js/nimo-boot.js"></script>\n    <link rel="stylesheet" href="/nimo/css/nimo-app.css">');
+    html = html.replace('<head>', `<head>\n    <script src="/nimo/js/nimo-boot.js?v=${BUILD}"></script>\n    <link rel="stylesheet" href="/nimo/css/nimo-app.css?v=${BUILD}">`);
     html = html.replace(/<title>[^<]*<\/title>/, '<title>NimoTavern</title>');
     return html;
 }
@@ -447,11 +455,10 @@ app.get('/', wrap(async (req, res) => {
     noStore(res);
     const s = await getSession(req);
     if (s) { res.type('html').send(INDEX_HTML); return; }
-    res.sendFile(page('home.html'));
+    sendPage(res, 'home.html');
 }));
 app.get('/index.html', (_req, res) => res.redirect('/'));
-for (const p of ['login', 'register', 'recover', 'account', 'privacy']) app.get('/' + p, (_req, res) => { noStore(res); res.sendFile(page(p + '.html')); });
-app.get('/home', (_req, res) => { noStore(res); res.sendFile(page('home.html')); });
+for (const p of ['login', 'register', 'recover', 'account', 'privacy', 'home']) app.get('/' + p, (_req, res) => sendPage(res, p + '.html'));
 app.get('/source', (_req, res) => res.redirect(CFG.sourceUrl));
 app.get('/nimo-sw.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
@@ -508,7 +515,7 @@ app.use(express.static(path.join(ROOT, 'public'), { index: false, maxAge: '1h', 
 
 // If a SillyTavern API call reaches the real server, the Service Worker isn't active: send to login.
 app.use('/api', (_req, res) => res.status(401).json({ error: 'login-required', nimo: 'login-required' }));
-app.use((_req, res) => res.status(404).sendFile(page('404.html')));
+app.use((_req, res) => { res.status(404); sendPage(res, '404.html'); });
 
 app.use((err, _req, res, _next) => {
     // Log only the error class/message, never request data.

@@ -265,8 +265,8 @@ export class VFS {
         if (!e) throw fsError('ENOENT', 'copyfile', a);
         if (mode === 1 && this.files.has(b)) throw fsError('EEXIST', 'copyfile', b); // COPYFILE_EXCL
         if (!this.dirs.has(pathPosix.dirname(b))) throw fsError('ENOENT', 'copyfile', b);
-        if (e.data) this.files.set(b, { data: new Uint8Array(e.data), mtime: Date.now(), btime: Date.now() });
-        else this.files.set(b, { ref: e.ref, size: e.size, mtime: Date.now(), btime: Date.now() }); // copy by reference
+        if (e.ref) this.files.set(b, { ref: e.ref, size: e.size, data: e.data, mtime: Date.now(), btime: Date.now() }); // shared default: copy by reference
+        else this.files.set(b, { data: new Uint8Array(e.data), mtime: Date.now(), btime: Date.now() });
         this.markDirty(b);
     }
 

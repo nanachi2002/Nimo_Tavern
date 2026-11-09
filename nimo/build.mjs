@@ -186,7 +186,7 @@ export function buildPages() {
         let src = fs.readFileSync(path.join(here, 'web/pages', f), 'utf8');
         const take = (k) => { const m = src.match(new RegExp(`<!--${k} ([\\s\\S]*?) -->\\r?\\n?`)); if (m) src = src.replace(m[0], ''); return m ? m[1] : ''; };
         const title = take('TITLE'), nav = take('NAV'), head = take('HEAD');
-        const html = layout.replace('{{TITLE}}', title).replace('{{NAV}}', nav).replace('{{HEAD}}', head.replace('type="module" ', 'defer ')).replace('{{BODY}}', src);
+        const html = layout.replace(/\.(css|js)"/g, '.$1?v={{V}}"').replace('{{TITLE}}', title).replace('{{NAV}}', nav).replace('{{HEAD}}', head.replace('type="module" ', 'defer ').replace(/\.js"/g, '.js?v={{V}}"')).replace('{{BODY}}', src);
         fs.writeFileSync(path.join(out, f), html);
     }
 }
@@ -194,6 +194,7 @@ export function buildPages() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const what = process.argv[2] || 'all';
     fs.mkdirSync(path.join(here, 'dist/public/nimo/js'), { recursive: true });
+    fs.writeFileSync(path.join(here, 'dist/build.json'), JSON.stringify({ build: BUILD_ID }));
     if (what === 'sw' || what === 'all') await buildSW({ minify: !process.argv.includes('--dev') });
     if (what === 'web' || what === 'all') await buildWeb({ minify: !process.argv.includes('--dev') });
 }

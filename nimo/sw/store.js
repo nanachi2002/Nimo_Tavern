@@ -50,7 +50,7 @@ const COMPRESSIBLE = /\.(json|jsonl|txt|md|css|yaml|yml|html|js|csv)$/i;
 function packFile(p, entry) {
     const header = { p, m: entry.mtime, b: entry.btime };
     let payload = new Uint8Array(0);
-    if (!entry.data && entry.ref) { header.r = entry.ref; header.s = entry.size; }
+    if (entry.ref) { header.r = entry.ref; header.s = entry.size; } // unmodified shared default file: sync as a reference
     else if (COMPRESSIBLE.test(p) && entry.data.byteLength > 256) { payload = zlibSync(entry.data, { level: 6 }); header.z = 1; }
     else payload = entry.data;
     const h = te.encode(JSON.stringify(header));
@@ -156,6 +156,11 @@ export class Store {
 
     async _flush() {
         if (!vfs.dirty.size) return;
+        this.uploading = true;
+        try { await this._flushInner(); } finally { this.uploading = false; }
+    }
+
+    async _flushInner() {
         const paths = [...vfs.dirty];
         vfs.dirty.clear();
         const puts = [], dels = [];
