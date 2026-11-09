@@ -104,3 +104,11 @@ body.nimo * { box-sizing: border-box; }
     .nimo-phrase { grid-template-columns: repeat(2, 1fr); }
     .nimo-flow .arrow { display: none; }
 }
+
+/* credit strip shown on every page */
+.nimo-credit { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: center; padding: 7px 16px; font-size: .88em; line-height: 1.4; background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor) 85%, transparent); border-bottom: 1px solid var(--SmartThemeBorderColor); text-align: center; }
+.nimo-credit > i.fa-heart { color: #ff6b81; }
+.nimo-credit a { color: var(--SmartThemeUnderlineColor); }
+.nimo-credit a.cr-link { padding: 1px 9px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 999px; text-decoration: none; white-space: nowrap; background: var(--black30a); }
+.nimo-credit a.cr-link:hover { background: var(--black50a); }
+.nimo-creditbox { border-color: var(--SmartThemeQuoteColor); }
