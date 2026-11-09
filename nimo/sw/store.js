@@ -18,6 +18,7 @@ function openCache() {
         r.onsuccess = () => {
             db = r.result;
             db.onversionchange = () => { db.close(); db = null; }; // allow wipe on logout
+            db.onclose = () => { db = null; }; // browser dropped the connection (iOS Safari does): reopen next time
             res(db);
         };
         r.onerror = () => rej(r.error);

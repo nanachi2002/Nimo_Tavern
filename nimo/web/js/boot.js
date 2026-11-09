@@ -38,6 +38,24 @@
         window.nimoStatus = s;
     }).catch(goLogin);
 
+    // SillyTavern's own "couldn't get CSRF token" toast is a dead end, so check the same request ourselves:
+    // retry once automatically, otherwise explain what went wrong and offer a way out.
+    fetch('/csrf-token', { cache: 'no-store' }).then(async (r) => {
+        if (r.ok) { sessionStorage.removeItem('nimo-csrf-retry'); return; }
+        if (r.status === 401) return; // locked: the status check above sends us to the login page
+        let why = ''; try { why = (await r.text()).slice(0, 300); } catch { /* */ }
+        if (!sessionStorage.getItem('nimo-csrf-retry')) { sessionStorage.setItem('nimo-csrf-retry', '1'); location.reload(); return; }
+        const o = overlay('NimoTavern could not start' + (why ? ': ' + why.replace(/^\{"error":"|"\}$/g, '') : '.'));
+        if (!o.querySelector('button')) {
+            const b = document.createElement('div');
+            b.style.cssText = 'display:flex;gap:10px';
+            b.innerHTML = '<button style="padding:8px 16px;cursor:pointer" id="nimo-retry">Try again</button><button style="padding:8px 16px;cursor:pointer" id="nimo-relogin">Log in again</button>';
+            o.append(b);
+            b.querySelector('#nimo-retry').onclick = () => { sessionStorage.removeItem('nimo-csrf-retry'); location.reload(); };
+            b.querySelector('#nimo-relogin').onclick = goLogin;
+        }
+    }).catch(() => { });
+
     let pendingWrites = 0;
     navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'nimo-locked') goLogin();

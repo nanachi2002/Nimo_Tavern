@@ -97,10 +97,26 @@ async function boot() {
     startPeriodicSync();
 }
 
+// Mobile browsers (iOS especially) sometimes drop the first IndexedDB connection or the network while a Service Worker starts: try again before giving up.
+async function bootWithRetry() {
+    let last;
+    for (let i = 0; i < 3; i++) {
+        try { return await boot(); } catch (e) {
+            if (e.locked) throw e;
+            last = e;
+            console.warn('[nimo] boot attempt ' + (i + 1) + ' failed', e);
+            resetMemory();
+            closeCache();
+            await new Promise(r => setTimeout(r, 600 * (i + 1)));
+        }
+    }
+    throw last;
+}
+
 function ensureBooted() {
     if (!bootPromise) {
         bootError = null;
-        bootPromise = boot().catch((e) => { bootError = e; bootPromise = null; resetMemory(); throw e; });
+        bootPromise = bootWithRetry().catch((e) => { bootError = e; bootPromise = null; resetMemory(); throw e; });
     }
     return bootPromise;
 }
