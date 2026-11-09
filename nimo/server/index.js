@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import dns from 'node:dns/promises';
 import net from 'node:net';
-import { Readable } from 'node:stream';
+import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { createStats } from './stats.js';
 
@@ -208,16 +208,41 @@ auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (re
     }
 }));
 
+// Guessing protection per account. With Turnstile configured, an account that has seen CAPTCHA_AFTER failed
+// attempts requires a captcha for every further attempt (instead of a lockout, which anyone could use to lock a
+// known username out). Unknown usernames are counted the same way, in RAM only, so the captcha prompt doesn't
+// reveal which accounts exist.
+const CAPTCHA_AFTER = 5;
+const nameFails = new Map(); // HMAC(kind:username) -> { n, reset }
+const nameKey = (kind, ulc) => crypto.createHmac('sha256', CFG.secret).update(kind + ':' + ulc).digest('base64').slice(0, 16);
+function ramFails(kind, ulc) { const b = nameFails.get(nameKey(kind, ulc)); return b && b.reset > Date.now() ? b.n : 0; }
+function bumpRamFails(kind, ulc) {
+    const k = nameKey(kind, ulc); const now = Date.now();
+    let b = nameFails.get(k); if (!b || b.reset < now) { b = { n: 0, reset: now + 24 * 3600_000 }; nameFails.set(k, b); }
+    return ++b.n;
+}
+setInterval(() => { const now = Date.now(); for (const [k, b] of nameFails) if (b.reset < now) nameFails.delete(k); }, 3600_000).unref();
+const captchaOn = () => !!CFG.turnstileSecret;
+const captchaNeeded = (res) => res.status(403).json({ error: 'Too many failed attempts on this account. Please complete the check below, then try again.', captcha: true, siteKey: CFG.turnstileSite });
+
 auth.post('/login', limit('login', 20, 15 * 60_000), jsonSmall, wrap(async (req, res) => {
     const u = String(req.body?.username || '');
     if (!USERNAME_RE.test(u)) return res.status(400).json({ error: 'Invalid credentials' });
-    const { rows } = await pool.query('SELECT id, username, salt_pw, auth_pw_hash, wrapped_pw, failed_logins, locked_until FROM users WHERE username_lc = $1', [u.toLowerCase()]);
+    const ulc = u.toLowerCase();
+    const { rows } = await pool.query('SELECT id, username, salt_pw, auth_pw_hash, wrapped_pw, failed_logins, locked_until FROM users WHERE username_lc = $1', [ulc]);
     const user = rows[0];
-    if (user?.locked_until && user.locked_until > new Date()) return res.status(429).json({ error: 'Too many failed attempts. Try again in a few minutes.' });
+    const fails = user ? user.failed_logins : ramFails('login', ulc);
+    if (captchaOn()) {
+        if (fails >= CAPTCHA_AFTER && !await verifyTurnstile(req.body?.turnstile)) return captchaNeeded(res);
+    } else if (user?.locked_until && user.locked_until > new Date()) return res.status(429).json({ error: 'Too many failed attempts. Try again in a few minutes.' });
     const ok = user ? await verifyAuth(req.body.authKey, user.salt_pw, user.auth_pw_hash) : (await hashAuth('0'.repeat(64), Buffer.alloc(16)), false);
     if (!ok) {
-        if (user) await pool.query(`UPDATE users SET failed_logins = failed_logins + 1, locked_until = CASE WHEN failed_logins + 1 >= 10 THEN now() + interval '15 minutes' ELSE NULL END WHERE id = $1`, [user.id]);
-        return res.status(401).json({ error: 'Invalid username or password' });
+        let n;
+        if (user) {
+            const r = await pool.query(`UPDATE users SET failed_logins = failed_logins + 1, locked_until = CASE WHEN $2 AND failed_logins + 1 >= 10 THEN now() + interval '15 minutes' ELSE NULL END WHERE id = $1 RETURNING failed_logins`, [user.id, !captchaOn()]);
+            n = r.rows[0].failed_logins;
+        } else n = bumpRamFails('login', ulc);
+        return res.status(401).json({ error: 'Invalid username or password', captcha: captchaOn() && n >= CAPTCHA_AFTER, siteKey: CFG.turnstileSite });
     }
     await pool.query('UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1', [user.id]);
     await createSession(res, user.id);
@@ -326,15 +351,19 @@ auth.post('/legacy/claim', limit('login', 20, 15 * 60_000), jsonSmall, wrap(asyn
     if (!validKdf(b.kdf) || !HEX64.test(b.authPw || '') || !HEX64.test(b.authRec || '') || !B64.test(b.wrappedPw || '') || !B64.test(b.wrappedRec || '')) return res.status(400).json({ error: 'Invalid data' });
     const saltPw = Buffer.from(String(b.saltPw || ''), 'base64'); const saltRec = Buffer.from(String(b.saltRec || ''), 'base64');
     if (saltPw.length !== 16 || saltRec.length !== 16) return res.status(400).json({ error: 'Invalid salt' });
+    const ulc = u.toLowerCase();
+    if (captchaOn() && ramFails('legacy', ulc) >= CAPTCHA_AFTER && !await verifyTurnstile(b.turnstile)) return captchaNeeded(res);
+    if (!captchaOn() && ramFails('legacy', ulc) >= 10) return res.status(429).json({ error: 'Too many failed attempts. Try again later.' });
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const { rows: [leg] } = await client.query('SELECT * FROM legacy_accounts WHERE username_lc = $1 AND claimed_user IS NULL FOR UPDATE', [u.toLowerCase()]);
+        const { rows: [leg] } = await client.query('SELECT * FROM legacy_accounts WHERE username_lc = $1 AND claimed_user IS NULL FOR UPDATE', [ulc]);
         const given = Buffer.from(String(b.stHash || ''), 'base64');
         const stored = leg ? Buffer.from(leg.st_hash, 'base64') : Buffer.alloc(64);
         if (!leg || given.length !== stored.length || !crypto.timingSafeEqual(given, stored)) {
             await client.query('ROLLBACK');
-            return res.status(401).json({ error: 'Invalid username or password' });
+            const n = bumpRamFails('legacy', ulc);
+            return res.status(401).json({ error: 'Invalid username or password', captcha: captchaOn() && n >= CAPTCHA_AFTER, siteKey: CFG.turnstileSite });
         }
         const { rows: [user] } = await client.query(
             `INSERT INTO users (username, username_lc, kdf, salt_pw, auth_pw_hash, salt_rec, auth_rec_hash, wrapped_pw, wrapped_rec, quota_bytes)
@@ -380,8 +409,13 @@ blobs.get('/changes', wrap(async (req, res) => {
     res.json({ changes: rows.map(r => ({ id: r.id, seq: Number(r.seq), size: r.size, deleted: r.deleted })), cursor: Number(u.rows[0].seq), quota: { used: Number(u.rows[0].used_bytes), limit: Number(u.rows[0].quota_bytes) } });
 }));
 
+const FETCH_MAX_BYTES = 96 * 1024 * 1024;
 blobs.post('/fetch', express.json({ limit: '64kb' }), wrap(async (req, res) => {
-    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(i => BLOB_ID.test(i)).slice(0, 200) : [];
+    const asked = Array.isArray(req.body?.ids) ? req.body.ids.filter(i => BLOB_ID.test(i)).slice(0, 200) : [];
+    // Bound the memory one request can use (the app client asks for ~4 MB batches; one blob is at most 64 MB).
+    const { rows: sizes } = await pool.query('SELECT id, size FROM blobs WHERE user_id = $1 AND id = ANY($2) AND data IS NOT NULL', [req.session.userId, asked]);
+    const ids = []; let total = 0;
+    for (const r of sizes) { if (ids.length && total + r.size > FETCH_MAX_BYTES) break; ids.push(r.id); total += r.size; }
     const { rows } = await pool.query('SELECT id, seq, data FROM blobs WHERE user_id = $1 AND id = ANY($2) AND data IS NOT NULL', [req.session.userId, ids]);
     const parts = [];
     for (const r of rows) {
@@ -408,6 +442,11 @@ blobs.post('/put', express.raw({ type: 'application/octet-stream', limit: '72mb'
         if (!BLOB_ID.test(id) || len > MAX_BLOB || off + len > buf.length) return res.status(400).json({ error: 'Bad frame' });
         items.push({ id, data: buf.subarray(off, off + len) }); off += len;
     }
+    // The same id twice in one batch would be counted twice against the stored size (and could be used to
+    // push used_bytes down and bypass the quota). Only the last copy of each id is kept, as the client intends.
+    const byId = new Map();
+    for (const it of items) byId.set(it.id, it);
+    items.length = 0; items.push(...byId.values());
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -463,41 +502,62 @@ app.use('/api/nimo/blobs', blobs);
 // Streams bytes through; nothing is logged or stored.
 const HOP = new Set(['host', 'cookie', 'connection', 'content-length', 'transfer-encoding', 'origin', 'referer', 'x-nimo-target', 'x-nimo-relay', 'x-nimo-client', 'x-forwarded-for', 'x-forwarded-proto', 'x-real-ip', 'cf-connecting-ip', 'cf-ipcountry', 'cf-ray', 'cf-visitor', 'cdn-loop', 'accept-encoding', 'sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform', 'user-agent', 'accept-language', 'priority', 'true-client-ip']);
 
+// Everything that isn't the public internet: loopback, LAN, link-local, CGNAT, documentation/benchmark ranges,
+// multicast, and IPv6 forms that embed or translate IPv4 (mapped, NAT64, 6to4, Teredo).
+// Two separate lists: a BlockList also matches IPv4 addresses against IPv6 rules (as ::ffff:a.b.c.d), so the
+// "IPv4-mapped" rule below would otherwise block every IPv4 address.
+const NON_PUBLIC_V4 = new net.BlockList();
+const NON_PUBLIC_V6 = new net.BlockList();
+for (const [a, p] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 3]]) NON_PUBLIC_V4.addSubnet(a, p, 'ipv4');
+for (const [a, p] of [['::', 96], ['::ffff:0:0', 96], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 32], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]]) NON_PUBLIC_V6.addSubnet(a, p, 'ipv6');
 function isPublicIp(ip) {
-    if (net.isIPv4(ip)) {
-        const [a, b] = ip.split('.').map(Number);
-        return !(a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224);
-    }
-    const l = ip.toLowerCase();
-    return !(l === '::1' || l === '::' || l.startsWith('fc') || l.startsWith('fd') || l.startsWith('fe80') || l.startsWith('::ffff:'));
+    if (net.isIPv4(ip)) return !NON_PUBLIC_V4.check(ip, 'ipv4');
+    if (net.isIPv6(ip)) return !NON_PUBLIC_V6.check(ip, 'ipv6');
+    return false;
 }
 
-app.all('/api/nimo/relay', requireClientHeaderRelay, requireSession, limit('relay', 120, 60_000, (req) => 'u' + req.session.userId), wrap(async (req, res) => {
+// DNS lookup used for the actual connection. Checking the address here (instead of resolving once
+// beforehand) closes DNS rebinding: the socket can only ever connect to an address we've vetted.
+function publicOnlyLookup(hostname, opts, cb) {
+    dns.lookup(hostname, { all: true, verbatim: true }).then((addrs) => {
+        if (!addrs.length || addrs.some((a) => !isPublicIp(a.address))) return cb(Object.assign(new Error('private address'), { code: 'NIMO_PRIVATE' }));
+        if (opts && opts.all) return cb(null, addrs);
+        cb(null, addrs[0].address, addrs[0].family);
+    }, (e) => cb(e));
+}
+
+// Only headers a provider client actually needs are passed back; nothing that could change how the
+// browser treats our origin (CSP, CORS, cookies, redirects, caching...).
+const RELAY_RESP_HEADERS = /^(content-type|content-encoding|retry-after|x-request-id|request-id|x-ratelimit-[a-z0-9-]+|anthropic-ratelimit-[a-z0-9-]+|openai-[a-z0-9-]+)$/;
+
+app.all('/api/nimo/relay', requireClientHeaderRelay, requireSession, limit('relay', 120, 60_000, (req) => 'u' + req.session.userId), (req, res) => {
     stats.count('relay_calls');
     let target;
     try { target = new URL(String(req.headers['x-nimo-target'] || '')); } catch { return res.status(400).send('Bad target'); }
     if (target.protocol !== 'https:' || target.username || target.password) return res.status(400).send('Relay only supports public https:// endpoints');
-    const addrs = await dns.lookup(target.hostname, { all: true }).catch(() => []);
-    if (!addrs.length || !addrs.every(a => isPublicIp(a.address))) return res.status(400).send('Relay refuses private or unresolvable addresses');
+    if (net.isIP(target.hostname.replace(/^\[|\]$/g, '')) && !isPublicIp(target.hostname.replace(/^\[|\]$/g, ''))) return res.status(400).send('Relay refuses private or unresolvable addresses');
     const headers = {};
     for (const [k, v] of Object.entries(req.headers)) if (!HOP.has(k.toLowerCase()) && !k.startsWith('x-nimo')) headers[k] = v;
-    const ac = new AbortController();
-    req.on('close', () => ac.abort());
     const hasBody = !['GET', 'HEAD'].includes(req.method);
-    let upstream;
-    try {
-        upstream = await fetch(target, { method: req.method, headers, body: hasBody ? Readable.toWeb(req) : undefined, duplex: hasBody ? 'half' : undefined, signal: ac.signal, redirect: 'manual' });
-    } catch (e) {
-        if (ac.signal.aborted) return;
-        return res.status(502).send('Relay could not reach the provider');
-    }
-    res.status(upstream.status);
-    upstream.headers.forEach((v, k) => { if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'set-cookie', 'location'].includes(k)) res.setHeader(k, v); });
-    res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-Accel-Buffering', 'no');
-    if (!upstream.body) return res.end();
-    Readable.fromWeb(upstream.body).on('error', () => res.end()).pipe(res);
-}));
+    const up = https.request(target, { method: req.method, headers, lookup: publicOnlyLookup, timeout: 600_000 }, (upRes) => {
+        res.status(upRes.statusCode || 502);
+        for (const [k, v] of Object.entries(upRes.headers)) if (RELAY_RESP_HEADERS.test(k) && v !== undefined) res.setHeader(k, v);
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'");
+        upRes.on('error', () => res.end());
+        upRes.pipe(res);
+    });
+    up.on('timeout', () => up.destroy(new Error('timeout')));
+    up.on('error', (e) => {
+        if (res.headersSent) return res.end();
+        if (e.code === 'NIMO_PRIVATE') return res.status(400).send('Relay refuses private or unresolvable addresses');
+        res.status(502).send('Relay could not reach the provider');
+    });
+    // Client went away before we finished: stop talking to the provider.
+    res.on('close', () => { if (!res.writableFinished) up.destroy(); });
+    if (hasBody) req.pipe(up); else up.end();
+});
 function requireClientHeaderRelay(req, res, next) { if (!req.headers['x-nimo-relay']) return res.status(403).end(); next(); }
 
 // ---------------------------------------------------------------------------

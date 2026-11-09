@@ -10,7 +10,7 @@ export async function api(path, body, method = body ? 'POST' : 'GET') {
     });
     let data = {};
     try { data = await r.json(); } catch { /* empty */ }
-    if (!r.ok) throw Object.assign(new Error(data.error || `Request failed (${r.status})`), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error(data.error || `Request failed (${r.status})`), { status: r.status, data });
     return data;
 }
 

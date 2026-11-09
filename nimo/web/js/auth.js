@@ -52,6 +52,31 @@ function checkPasswords(fd) {
     if (String(fd.get('password')).length < 10) throw new Error('Password must be at least 10 characters');
 }
 
+/** Only same-site paths: "//evil.com" or "/\evil.com" would leave the site right after login. */
+function safeNext() {
+    const next = new URLSearchParams(location.search).get('next') || '';
+    return /^\/(?![/\\])[^\s]*$/.test(next) ? next : '/';
+}
+
+/** Shows Turnstile when the server asks for it after repeated failed logins. */
+let loginCaptchaShown = false;
+function showLoginCaptcha(siteKey) {
+    if (!siteKey) return;
+    // Not id="turnstile": browsers expose element ids as globals, which would shadow window.turnstile.
+    let box = document.getElementById('nimo-login-captcha');
+    if (!box) { box = document.createElement('div'); box.id = 'nimo-login-captcha'; submitBtn.before(box); }
+    const lib = () => (typeof window.turnstile?.render === 'function' ? window.turnstile : null);
+    if (loginCaptchaShown) { turnstileToken = null; try { lib()?.reset(); } catch { /* */ } return; }
+    loginCaptchaShown = true;
+    window.nimoTurnstileCb = (t) => { turnstileToken = t; };
+    const render = () => lib()?.render('#nimo-login-captcha', { sitekey: siteKey, theme: 'dark', callback: window.nimoTurnstileCb, 'expired-callback': () => { turnstileToken = null; } });
+    if (lib()) return render();
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.onload = render;
+    document.head.append(s);
+}
+
 if (page === 'login') {
     const panel = document.getElementById('phrase-panel');
     form.addEventListener('submit', async (e) => {
@@ -60,21 +85,21 @@ if (page === 'login') {
         const fd = new FormData(form);
         const username = String(fd.get('username')).trim();
         const password = String(fd.get('password'));
-        const next = new URLSearchParams(location.search).get('next');
-        const target = next?.startsWith('/') ? next : '/';
+        const target = safeNext();
         setBusy(true, 'Deriving your key…');
         try {
             const pre = await api('/auth/prelogin', { username });
             if (pre.legacy) return await claimLegacy(username, password, pre.legacy.salt, target);
             const { kek, authKey } = await derivePasswordKeys(username, password, unb64(pre.salt), pre.kdf);
-            const res = await api('/auth/login', { username, authKey });
+            const res = await api('/auth/login', { username, authKey, turnstile: turnstileToken });
             setBusy(true, 'Decrypting your tavern…');
             const dek = await unwrapDek(kek, res.wrappedPw);
             await unlockWithProgress(dek, res.username);
             location.replace(target);
         } catch (ex) {
             setBusy(false);
-            showError(err, ex.status === 401 ? 'Wrong username or password.' : ex.message);
+            if (ex.data?.captcha) { try { showLoginCaptcha(ex.data.siteKey); } catch (e2) { console.warn('captcha', e2); } }
+            showError(err, ex.status === 401 ? 'Wrong username or password.' + (ex.data?.captcha ? ' Please complete the check below before trying again.' : '') : ex.message);
         }
     });
 
@@ -88,7 +113,7 @@ if (page === 'login') {
         const pw = await newPasswordMaterial(username, password);
         const rec = await newRecoveryMaterial(username);
         const res = await api('/auth/legacy/claim', {
-            username, stHash, kdf: KDF_DEFAULT,
+            username, stHash, kdf: KDF_DEFAULT, turnstile: turnstileToken,
             saltPw: b64(pw.saltPw), authPw: pw.authPw, wrappedPw: await wrapDek(pw.kek, dek),
             saltRec: b64(rec.saltRec), authRec: rec.authRec, wrappedRec: await wrapDek(rec.kek, dek),
         });

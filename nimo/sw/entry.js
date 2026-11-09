@@ -382,15 +382,51 @@ async function handleStatic(request) {
     return r;
 }
 
+// ---------------------------------------------------------------------------
+// Security: the SW acts on the user's decrypted data without cookies or CSRF tokens, so it must only
+// obey requests made by our own pages.
+//  * A navigation (link, form submit, window.open, iframe) can be started by ANY website, e.g. a hidden
+//    <form method=post action="https://nimorp.lol/api/settings/save">. Such requests never reach the
+//    tavern's API: only plain GET navigations to user files are allowed.
+//  * Anything the SW serves as a document (a user file opened in a tab) is sandboxed with a strict CSP,
+//    so an .html/.svg smuggled in by a character card can't run script on our origin.
+const DOC_CSP = "sandbox; default-src 'none'; img-src 'self' data: blob:; media-src 'self' data: blob:; style-src 'unsafe-inline'; font-src 'self' data:";
+const NAV_ALLOWED = ['/backgrounds/', '/characters/', '/User%20Avatars/', '/User Avatars/', '/assets/', '/user/images/', '/user/files/'];
+const isDocumentRequest = (r) => r.mode === 'navigate' || ['document', 'iframe', 'frame', 'object', 'embed'].includes(r.destination);
+
+function harden(response, asDocument) {
+    if (!response || response.type === 'opaque' || response.type === 'error') return response;
+    const h = new Headers(response.headers);
+    h.set('X-Content-Type-Options', 'nosniff');
+    if (asDocument) {
+        h.set('Content-Security-Policy', DOC_CSP);
+        h.set('Cross-Origin-Resource-Policy', 'same-origin');
+        // Anything that isn't plainly a picture/sound/video is downloaded instead of rendered.
+        if (!/^(image\/(?!svg)|audio\/|video\/|text\/plain)/i.test(h.get('Content-Type') || '')) h.set('Content-Disposition', 'attachment');
+    }
+    const nullBody = [101, 204, 205, 304].includes(response.status);
+    return new Response(nullBody ? null : response.body, { status: response.status, statusText: response.statusText, headers: h });
+}
+
+function refuseNavigation() {
+    return new Response('Blocked: this address can only be used by the NimoTavern app itself.', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' } });
+}
+
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return; // never touch cross-origin traffic
     const p = url.pathname;
+    const isDoc = isDocumentRequest(request);
+    const handled = p.startsWith('/api/nimo-local/') || isAppPath(p);
 
-    if (p.startsWith('/api/nimo-local/')) { event.respondWith(handleLocal(request)); return; }
+    if (handled && isDoc && (request.method !== 'GET' || !NAV_ALLOWED.some((x) => p.startsWith(x)))) {
+        event.respondWith(refuseNavigation());
+        return;
+    }
+    if (p.startsWith('/api/nimo-local/')) { event.respondWith(handleLocal(request).then((r) => harden(r, false))); return; }
     if (isAppPath(p)) {
-        event.respondWith(handleApp(request).then((r) => {
+        event.respondWith(handleApp(request).then((r) => harden(r, isDoc)).then((r) => {
             // Make sure writes are encrypted+uploaded even if the SW would otherwise be stopped.
             if (store && vfs.dirty.size) event.waitUntil(store.flush().then(broadcastPending)); // upload right away; flushes are serialized so bursts batch up
             return r;
