@@ -44,6 +44,7 @@ fs.createReadStream = (p, opts) => {
     let data;
     try { data = vfs.readFileSync(p); } catch (e) {
         const r = new Readable({ read() { } });
+        r.close = (cb) => { r.destroy(); if (typeof cb === 'function') queueMicrotask(cb); };
         queueMicrotask(() => r.destroy(e));
         return r;
     }
@@ -51,7 +52,7 @@ fs.createReadStream = (p, opts) => {
     const encoding = typeof opts === 'string' ? opts : opts?.encoding;
     const chunk = 64 * 1024;
     let off = 0;
-    return new Readable({
+    const stream = new Readable({
         encoding,
         read() {
             if (off >= data.length) { this.push(null); return; }
@@ -59,6 +60,10 @@ fs.createReadStream = (p, opts) => {
             off += chunk;
         },
     });
+    // Node's fs.ReadStream has close(); browser streams don't. SillyTavern calls it (e.g. readFirstLine).
+    stream.close = (cb) => { stream.destroy(); if (typeof cb === 'function') queueMicrotask(cb); };
+    stream.path = p;
+    return stream;
 };
 
 fs.createWriteStream = (p, opts) => {
