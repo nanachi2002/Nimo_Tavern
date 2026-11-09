@@ -57,8 +57,9 @@
 <ul>
     <li><b>No email, no phone, no real name.</b> A username and a password are enough.</li>
     <li><b>Provider requests go straight from your browser</b> to the provider. Prompts and keys don't pass through NimoTavern by default.</li>
-    <li><b>No access logs, no analytics, no ads, no trackers.</b> The only third-party script is the Cloudflare Turnstile captcha on the sign-up page, which is there to stop bots.</li>
-    <li><b>IP addresses are not stored.</b> They're kept in memory for a few minutes as salted hashes for rate limiting, then forgotten.</li>
+    <li><b>No access logs, no third-party analytics, no ads, no trackers.</b> The only third-party script is the Cloudflare Turnstile captcha on the sign-up page, which is there to stop bots.</li>
+    <li><b>IP addresses are not stored.</b> They're only held in memory as keyed hashes, for rate limiting (minutes) and for counting unique daily visitors (the random salt is discarded every day, so the hashes can't be linked across days).</li>
+    <li><b>Anonymous usage counts.</b> The operator sees plain daily numbers: page views, sign-ups, logins, unique visitors, and how many accounts were active that day, week or month. Nothing is stored per user or per IP, and the dedupe data for counting active accounts only exists for the current period and is then deleted. It's a count, never a list of who.</li>
     <li><b>Strict browser protections:</b> HTTPS only (with HSTS), a tight Content-Security-Policy that limits which servers the page can talk to, HttpOnly session cookies, no referrer leaks.</li>
     <li><b>Open source (AGPL-3.0).</b> Anyone can read the code and build their own copy.</li>
     <li><b>You can take everything with you</b> at any time, see <a href="/wiki/your-data">Your data</a>.</li>

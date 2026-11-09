@@ -5,7 +5,8 @@
 //
 // Privacy rules for this file:
 //   * never log request bodies, headers, IPs, usernames or blob contents
-//   * IPs are only held in RAM for rate limiting (hashed), never written anywhere
+//   * IPs are only held in RAM (keyed hashes) for rate limiting and the daily unique-visitor count, never written anywhere
+//   * usage statistics are aggregate counters only, see stats.js
 import express from 'express';
 import pg from 'pg';
 import crypto from 'node:crypto';
@@ -15,6 +16,7 @@ import dns from 'node:dns/promises';
 import net from 'node:net';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
+import { createStats } from './stats.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '../..'); // SillyTavern fork root
@@ -35,11 +37,15 @@ const CFG = {
     quota: Number(env('DEFAULT_QUOTA_BYTES', 1024 * 1024 * 1024)),
     sourceUrl: env('SOURCE_URL', 'https://github.com/SillyTavern/SillyTavern'),
     sessionDays: Number(env('SESSION_DAYS', 30)),
+    statsAdmin: env('STATS_ADMIN', 'ciel2002').toLowerCase(), // the only account allowed to open the stats panel
 };
 if (!CFG.secret || CFG.secret.length < 32) { console.error('NIMO_SECRET (>=32 chars) is required'); process.exit(1); }
 
 const pool = new pg.Pool({ connectionString: CFG.db, max: 20 });
 await pool.query(fs.readFileSync(path.join(here, 'schema.sql'), 'utf8'));
+const stats = createStats({ pool, secret: CFG.secret });
+await stats.init();
+const isAdmin = (s) => !!s && s.username.toLowerCase() === CFG.statsAdmin;
 
 const COOKIE = CFG.secureCookies ? '__Host-nimo' : 'nimo_session';
 const app = express();
@@ -119,6 +125,8 @@ async function createSession(res, userId) {
     const token = crypto.randomBytes(32);
     const expires = new Date(Date.now() + CFG.sessionDays * 86400_000);
     await pool.query('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)', [sha256(token), userId, expires]);
+    stats.count('logins');
+    stats.markActive(userId);
     res.setHeader('Set-Cookie', `${COOKIE}=${token.toString('base64url')}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}${CFG.secureCookies ? '; Secure' : ''}`);
 }
 function clearCookie(res) { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${CFG.secureCookies ? '; Secure' : ''}`); }
@@ -140,6 +148,7 @@ async function requireSession(req, res, next) {
         const s = await getSession(req);
         if (!s) return res.status(401).json({ error: 'Not logged in' });
         req.session = s;
+        stats.markActive(s.userId);
         next();
     } catch (e) { next(e); }
 }
@@ -191,6 +200,7 @@ auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (re
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
             [b.username, b.username.toLowerCase(), b.kdf, saltPw, await hashAuth(b.authPw, saltPw), saltRec, await hashAuth(b.authRec, saltRec), b.wrappedPw, b.wrappedRec, CFG.quota]);
         await createSession(res, rows[0].id);
+        stats.count('signups');
         res.json({ ok: true, username: b.username });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'This username is taken' });
@@ -226,7 +236,7 @@ auth.get('/me', wrap(async (req, res) => {
     if (!s) return res.status(401).json({ error: 'Not logged in' });
     const { rows } = await pool.query('SELECT username, created_at, used_bytes, quota_bytes FROM users WHERE id = $1', [s.userId]);
     const { rows: leg } = await pool.query('SELECT size FROM legacy_accounts WHERE claimed_user = $1', [s.userId]);
-    res.json({ username: rows[0].username, created: rows[0].created_at, used: Number(rows[0].used_bytes), quota: Number(rows[0].quota_bytes), legacyPending: leg[0] ? Number(leg[0].size) : 0 });
+    res.json({ username: rows[0].username, created: rows[0].created_at, used: Number(rows[0].used_bytes), quota: Number(rows[0].quota_bytes), legacyPending: leg[0] ? Number(leg[0].size) : 0, admin: isAdmin(s) });
 }));
 
 // Recovery: step 1 returns the recovery salt (fake for unknown users)
@@ -333,6 +343,7 @@ auth.post('/legacy/claim', limit('login', 20, 15 * 60_000), jsonSmall, wrap(asyn
         await client.query('UPDATE legacy_accounts SET claimed_user = $2 WHERE username_lc = $1', [leg.username_lc, user.id]);
         await client.query('COMMIT');
         await createSession(res, user.id);
+        stats.count('signups');
         res.json({ ok: true, username: leg.username, legacySize: Number(leg.size) });
     } catch (e) { await client.query('ROLLBACK').catch(() => { }); throw e; } finally { client.release(); }
 }));
@@ -462,6 +473,7 @@ function isPublicIp(ip) {
 }
 
 app.all('/api/nimo/relay', requireClientHeaderRelay, requireSession, limit('relay', 120, 60_000, (req) => 'u' + req.session.userId), wrap(async (req, res) => {
+    stats.count('relay_calls');
     let target;
     try { target = new URL(String(req.headers['x-nimo-target'] || '')); } catch { return res.status(400).send('Bad target'); }
     if (target.protocol !== 'https:' || target.username || target.password) return res.status(400).send('Relay only supports public https:// endpoints');
@@ -512,18 +524,34 @@ const noStore = (res) => res.setHeader('Cache-Control', 'no-store');
 app.get('/', wrap(async (req, res) => {
     noStore(res);
     const s = await getSession(req);
-    if (s) { res.type('html').send(INDEX_HTML); return; }
+    stats.view(req);
+    if (s) { stats.markActive(s.userId); res.type('html').send(INDEX_HTML); return; }
     sendPage(res, 'home.html');
 }));
 app.get('/index.html', (_req, res) => res.redirect('/'));
-for (const p of ['login', 'register', 'recover', 'account', 'privacy', 'home']) app.get('/' + p, (_req, res) => sendPage(res, p + '.html'));
+for (const p of ['login', 'register', 'recover', 'account', 'privacy', 'home']) app.get('/' + p, (req, res) => { stats.view(req); sendPage(res, p + '.html'); });
+
+// Stats panel: aggregate counters only (see stats.js). Only the configured admin account can open it;
+// everyone else, logged in or not, gets the same 404 as any unknown page.
+app.get('/stats', wrap(async (req, res, next) => {
+    if (!isAdmin(await getSession(req))) return next();
+    res.setHeader('X-Robots-Tag', 'noindex');
+    sendPage(res, 'stats.html');
+}));
+app.get('/api/nimo/stats', wrap(async (req, res, next) => {
+    if (!isAdmin(await getSession(req))) return res.status(404).json({ error: 'Not found' });
+    noStore(res);
+    res.json(await stats.summary(Number(req.query.days) || 30));
+}));
+
 // Wiki (public, static, built from nimo/web/wiki)
-app.get('/wiki', (_req, res) => sendPage(res, 'wiki/index.html'));
+app.get('/wiki', (req, res) => { stats.view(req, true); sendPage(res, 'wiki/index.html'); });
 app.get('/wiki/search.json', (_req, res) => { res.setHeader('Cache-Control', 'public, max-age=300'); res.type('json').sendFile(path.join(NIMO_PAGES, 'wiki/search.json')); });
 app.get('/wiki/:slug', (req, res, next) => {
     const slug = req.params.slug.replace(/\.html$/, '');
     if (!/^[a-z0-9-]{1,60}$/.test(slug) || !fs.existsSync(path.join(NIMO_PAGES, 'wiki', slug + '.html'))) return next();
     if (slug === 'index') return res.redirect('/wiki');
+    stats.view(req, true);
     sendPage(res, 'wiki/' + slug + '.html');
 });
 app.get('/source', (_req, res) => res.redirect(CFG.sourceUrl));
@@ -593,4 +621,5 @@ app.use((err, _req, res, _next) => {
 // Housekeeping: expired sessions.
 setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at < now()').catch(() => { }), 3600_000).unref();
 
-app.listen(CFG.port, CFG.host, () => console.log(`NimoTavern listening on ${CFG.host}:${CFG.port}`));
+const server = app.listen(CFG.port, CFG.host, () => console.log(`NimoTavern listening on ${CFG.host}:${CFG.port}`));
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, async () => { server.close(); try { await stats.flush(); } catch { /* */ } process.exit(0); });

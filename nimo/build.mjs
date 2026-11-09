@@ -171,7 +171,7 @@ function copyWasm() {
 
 export async function buildWeb({ minify = true } = {}) {
     await esbuild.build({
-        entryPoints: { 'nimo-auth': path.join(here, 'web/js/auth.js'), 'nimo-boot': path.join(here, 'web/js/boot.js'), 'nimo-account': path.join(here, 'web/js/account.js'), 'nimo-wiki': path.join(here, 'web/js/wiki.js') },
+        entryPoints: { 'nimo-auth': path.join(here, 'web/js/auth.js'), 'nimo-boot': path.join(here, 'web/js/boot.js'), 'nimo-account': path.join(here, 'web/js/account.js'), 'nimo-wiki': path.join(here, 'web/js/wiki.js'), 'nimo-stats': path.join(here, 'web/js/stats.js') },
         bundle: true, format: 'iife', platform: 'browser', target: ['chrome110', 'firefox115', 'safari16'],
         outdir: path.join(here, 'dist/public/nimo/js'), minify, logLevel: 'info', loader: { '.wasm': 'binary' },
     });

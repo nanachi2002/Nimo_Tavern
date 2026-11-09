@@ -9,3 +9,4 @@
 #nimo-overlay img { width: 64px; animation: nimo-pulse 1.6s ease-in-out infinite; }
 @keyframes nimo-pulse { 50% { opacity: .5; } }
 #nimo_wiki_button { text-decoration: none; color: inherit; }
+#nimo_stats_button { text-decoration: none; color: inherit; }

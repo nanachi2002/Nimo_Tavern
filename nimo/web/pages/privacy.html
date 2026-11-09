@@ -18,8 +18,9 @@
         <h2>What the server never stores</h2>
         <ul>
             <li>No email, real name, phone number or payment info.</li>
-            <li>No IP addresses or user agents in the database. The app doesn't write access logs. IPs are only held in memory for a few minutes for rate limiting, and only as salted hashes.</li>
-            <li>No analytics, trackers, ads or third-party scripts. The only exception is the Cloudflare Turnstile captcha on the sign-up page, if it's enabled.</li>
+            <li>No IP addresses or user agents in the database. The app doesn't write access logs. IPs are only held in memory, as keyed hashes, for rate limiting (a few minutes) and for counting unique visitors per day (the random salt is discarded each day).</li>
+            <li><b>Anonymous usage counts</b> for the operator: per day, how many page views, sign-ups and logins happened, how many unique visitors there were, and <i>how many</i> accounts were active that day, week or month. These are plain numbers: nothing is stored per user, per IP or per page visited, and the sets used to avoid double-counting only exist for the current period and are then deleted.</li>
+            <li>No third-party analytics, trackers, ads or third-party scripts. The only exception is the Cloudflare Turnstile captcha on the sign-up page, if it's enabled.</li>
         </ul>
     </section>
 

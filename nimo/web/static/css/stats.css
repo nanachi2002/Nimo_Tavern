@@ -1,0 +1,25 @@
+/* Admin stats panel */
+.st-wrap { max-width: 1100px; }
+.st-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.st-range { display: flex; gap: 6px; }
+.st-range .menu_button { width: auto; margin: 0; padding: 6px 14px; }
+.st-range .menu_button.on { background-color: var(--okGreen70a); }
+.st-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin: 16px 0; }
+.st-card { display: flex; gap: 12px; padding: 14px; align-items: center; }
+.st-ico { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: var(--black50a); color: var(--SmartThemeQuoteColor); font-size: 18px; flex: none; }
+.st-label { font-size: .82em; color: var(--SmartThemeEmColor); }
+.st-val { font-size: 1.7em; font-weight: 700; line-height: 1.15; }
+.st-sub { font-size: .8em; color: var(--SmartThemeEmColor); }
+.st-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.st-chart { width: 100%; height: auto; display: block; }
+.st-chart .grid { stroke: var(--SmartThemeBorderColor); stroke-width: 1; opacity: .6; }
+.st-chart .axis { fill: var(--SmartThemeEmColor); font-size: 11px; font-family: var(--monoFontFamily); }
+.st-chart rect:hover { opacity: .85; }
+.st-legend { display: flex; gap: 16px; font-size: .85em; color: var(--SmartThemeEmColor); margin-top: 4px; }
+.st-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.st-hrow { display: grid; grid-template-columns: 140px 1fr 50px; gap: 10px; align-items: center; margin: 6px 0; }
+.st-htrack { height: 16px; background: var(--black30a); border-radius: 4px; overflow: hidden; }
+.st-htrack div { height: 100%; background: var(--SmartThemeQuoteColor); border-radius: 4px; }
+.st-hrow b { text-align: right; font-family: var(--monoFontFamily); }
+.nimo-section h2 { display: flex; gap: 10px; align-items: center; font-size: 1.15em; }
+@media (max-width: 800px) { .st-two { grid-template-columns: 1fr; } .st-hrow { grid-template-columns: 100px 1fr 40px; } }

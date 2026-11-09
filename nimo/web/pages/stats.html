@@ -1,0 +1,47 @@
+<!--TITLE Statistics · NimoTavern -->
+<!--NAV <a class="menu_button" href="/wiki"><i class="fa-solid fa-book-open"></i> Wiki</a><a class="menu_button primary" href="/"><i class="fa-solid fa-door-open"></i> Back to my tavern</a> -->
+<!--HEAD <link rel="stylesheet" href="/nimo/css/stats.css"><script type="module" src="/nimo/js/nimo-stats.js"></script> -->
+<main class="nimo-wrap st-wrap">
+    <section class="nimo-section nimo-glass">
+        <div class="st-head">
+            <div>
+                <h1 style="margin:0"><i class="fa-solid fa-chart-line nimo-quote"></i> Statistics</h1>
+                <p class="nimo-muted" style="margin:4px 0 0">Aggregate numbers only: no IP addresses, no usernames, nothing per user. All days are UTC.</p>
+            </div>
+            <div class="st-range" id="range">
+                <button class="menu_button" data-d="7">7 days</button>
+                <button class="menu_button on" data-d="30">30 days</button>
+                <button class="menu_button" data-d="90">90 days</button>
+                <button class="menu_button" id="refresh" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+        </div>
+        <div class="nimo-error" id="err"></div>
+        <div class="nimo-muted" id="updated" style="font-size:.85em;margin-top:6px"></div>
+    </section>
+
+    <div class="st-cards" id="cards"></div>
+
+    <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-eye nimo-quote"></i> Visitors &amp; page views</h2><p class="nimo-muted">Unique visitors per day (bars) and total page loads (line). Bots are filtered out; one person on two devices counts twice.</p><div id="c-visitors"></div></section>
+    <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-user-check nimo-quote"></i> Active accounts per day</h2><p class="nimo-muted">Accounts that synced, logged in or opened the tavern that day (a count, never a list).</p><div id="c-active"></div></section>
+    <div class="st-two">
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-user-plus nimo-quote"></i> New accounts</h2><div id="c-signups"></div></section>
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-right-to-bracket nimo-quote"></i> Logins</h2><div id="c-logins"></div></section>
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-book-open nimo-quote"></i> Wiki views</h2><div id="c-wiki"></div></section>
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-route nimo-quote"></i> Relay calls</h2><p class="nimo-muted">Opt-in relay requests (counted, never inspected).</p><div id="c-relay"></div></section>
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-calendar-week nimo-quote"></i> Weekly active accounts</h2><div id="c-weekly"></div></section>
+        <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-calendar nimo-quote"></i> Monthly active accounts</h2><div id="c-monthly"></div></section>
+    </div>
+    <section class="nimo-section nimo-glass"><h2><i class="fa-solid fa-hard-drive nimo-quote"></i> How much accounts store</h2><p class="nimo-muted">Number of accounts per storage size (sizes of encrypted data; contents are unreadable to the server).</p><div id="c-storage"></div></section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-shield-halved nimo-quote"></i> What is (and isn't) recorded</h2>
+        <ul>
+            <li><b>Recorded:</b> one row per day with plain counters (visitors, page views, wiki views, logins, sign-ups, relay calls), and the <i>number</i> of accounts active per day, week and month.</li>
+            <li><b>Unique visitors</b> are counted in server memory only, with a keyed hash of the IP and a random salt that is thrown away at the end of the day. IP addresses are never written to disk and can't be recovered or linked across days.</li>
+            <li><b>Active accounts</b> use a dedupe table of keyed hashes that only holds the <i>current</i> day/week/month and is purged when the period ends, so past activity can't be tied to any account.</li>
+            <li><b>Never recorded:</b> IPs, user agents, usernames in stats, which pages a person visited, per-user history, or anything about chats, characters or keys. There is no per-user list anywhere in this panel.</li>
+            <li>Totals such as accounts and storage come from data the server already needs to function (account count, blob sizes).</li>
+        </ul>
+        <p class="nimo-muted">This panel is only served to the admin account; everyone else sees a normal "not found" page.</p>
+    </section>
+</main>

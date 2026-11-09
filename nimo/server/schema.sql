@@ -45,6 +45,32 @@ ALTER TABLE blobs ALTER COLUMN data SET STORAGE EXTERNAL; -- ciphertext doesn't 
 -- Accounts imported from an existing SillyTavern instance, waiting to be claimed on first login.
 -- The archive is plaintext SillyTavern data (which the operator already had); it is deleted as
 -- soon as the owner's browser has re-encrypted and uploaded it.
+-- Aggregate usage counters for the operator's stats panel. Nothing here identifies a user, device or IP:
+--   stats_daily   one row per UTC day of plain counters
+--   stats_active  how many distinct accounts were active in a day / week / month (a number, not a list)
+--   stats_seen    dedupe set for the CURRENT period only: keyed hashes, purged as soon as the period ends
+CREATE TABLE IF NOT EXISTS stats_daily (
+    day          DATE PRIMARY KEY,
+    visitors     INT NOT NULL DEFAULT 0,
+    pageviews    INT NOT NULL DEFAULT 0,
+    wiki_views   INT NOT NULL DEFAULT 0,
+    logins       INT NOT NULL DEFAULT 0,
+    signups      INT NOT NULL DEFAULT 0,
+    relay_calls  INT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS stats_active (
+    kind    CHAR(1) NOT NULL,   -- d | w | m
+    period  TEXT NOT NULL,
+    n       INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (kind, period)
+);
+CREATE TABLE IF NOT EXISTS stats_seen (
+    kind    CHAR(1) NOT NULL,
+    period  TEXT NOT NULL,
+    h       BYTEA NOT NULL,
+    PRIMARY KEY (kind, period, h)
+);
+
 CREATE TABLE IF NOT EXISTS legacy_accounts (
     username_lc   TEXT PRIMARY KEY,
     username      TEXT NOT NULL,

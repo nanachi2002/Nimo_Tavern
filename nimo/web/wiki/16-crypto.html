@@ -100,9 +100,10 @@
 <tr><th>Table</th><th>Columns that matter</th><th>Readable by the operator?</th></tr>
 <tr><td><code>users</code></td><td>username, salts, scrypt(login proof), scrypt(recovery proof), wrapped DEKs, used bytes, quota</td><td>Username and sizes yes; everything else is a hash, salt or ciphertext</td></tr>
 <tr><td><code>sessions</code></td><td>hashed token, user id, expiry</td><td>No raw tokens</td></tr>
+<tr><td><code>stats_daily</code>, <code>stats_active</code>, <code>stats_seen</code></td><td>Daily counters (views, logins, sign-ups…); how many accounts were active per day/week/month; a dedupe set of keyed hashes for the <i>current</i> period only, purged when it ends</td><td>Numbers only. No usernames, IPs or per-account history</td></tr>
 <tr><td><code>blobs</code></td><td>user id, blob id (HMAC), ciphertext, size, sequence number</td><td>Ciphertext only</td></tr>
 </table></div>
-<p>There are no columns for IP address, user agent, email, or plaintext content, and no logs of requests.</p>
+<p>There are no columns for IP address, user agent, email, or plaintext content, and no logs of requests. The only usage data is aggregate: daily counters and counts of active accounts (see the <code>stats_*</code> tables). Unique visitors are counted in server memory with a daily-rotating salt and never written to disk.</p>
 
 <h2>Threat model</h2>
 <div class="wk-tablewrap"><table>

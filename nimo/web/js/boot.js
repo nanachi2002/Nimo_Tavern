@@ -88,7 +88,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
-        style.textContent = '#logout_button,#account_button,#nimo_wiki_button{display:flex !important}#admin_button{display:none !important}';
+        style.textContent = '#logout_button,#account_button,#nimo_wiki_button,#nimo_stats_button{display:flex !important}#admin_button{display:none !important}';
         document.head.append(style);
         const acct = document.getElementById('account_button');
         if (acct) {
@@ -101,6 +101,17 @@
             wiki.title = 'NimoTavern Wiki: guides for every feature, and how your privacy is protected';
             wiki.innerHTML = '<i class="fa-fw fa-solid fa-book-open"></i><span>Wiki</span>';
             acct.after(wiki);
+            // Statistics panel: shown only if the server says this account is the admin (the server enforces it too).
+            fetch('/api/nimo/auth/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then((me) => {
+                if (!me?.admin) return;
+                const st = document.createElement('a');
+                st.id = 'nimo_stats_button';
+                st.className = 'margin0 menu_button_icon menu_button';
+                st.href = '/stats'; st.target = '_blank'; st.rel = 'noopener';
+                st.title = 'NimoTavern statistics (admin)';
+                st.innerHTML = '<i class="fa-fw fa-solid fa-chart-line"></i><span>Stats</span>';
+                wiki.after(st);
+            }).catch(() => { });
         }
         const ver = document.getElementById('version_display');
         if (ver) {
