@@ -1,0 +1,31 @@
+<!--TITLE Create account · NimoTavern -->
+<!--NAV <a class="menu_button" href="/home">Home</a><a class="menu_button" href="/login">Log in</a> -->
+<!--HEAD <script type="module" src="/nimo/js/nimo-auth.js"></script> -->
+<main class="nimo-auth">
+    <form id="register-form" class="nimo-glass" data-page="register" autocomplete="on">
+        <h2><img src="/img/logo.png" alt=""> Create your tavern</h2>
+        <div class="nimo-error" id="err"></div>
+        <label>Username <input class="text_pole" name="username" autocomplete="username" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_.\-]{3,32}" title="3-32 characters: letters, numbers, _ . -" autofocus></label>
+        <label>Password <input class="text_pole" name="password" type="password" autocomplete="new-password" required minlength="10"></label>
+        <div class="nimo-strength"><div id="strength"></div></div>
+        <label>Confirm password <input class="text_pole" name="password2" type="password" autocomplete="new-password" required minlength="10"></label>
+        <p class="hint">Use at least 10 characters. A long passphrase works best: your password is the key to your encryption.</p>
+        <label class="nimo-check"><input type="checkbox" name="understand" required> <span>I understand that NimoTavern can't reset my password. If I lose both my password and my recovery phrase, my data is gone for good.</span></label>
+        <div id="turnstile"></div>
+        <button class="menu_button primary" type="submit"><i class="fa-solid fa-user-plus"></i> Create account</button>
+        <div class="nimo-busy" id="busy"><i class="fa-solid fa-spinner fa-spin"></i> <span>Generating your keys…</span></div>
+        <p class="hint"><i class="fa-solid fa-user-secret"></i> No email or personal info needed. Pick a username that doesn't identify you.</p>
+    </form>
+
+    <div id="phrase-panel" class="panel nimo-glass" hidden>
+        <h2><i class="fa-solid fa-key nimo-quote"></i> Your recovery phrase</h2>
+        <p class="hint">These 12 words are the <b>only</b> way back into your account if you forget your password. Write them down on paper or save them in a password manager. You won't see them again.</p>
+        <div class="nimo-phrase" id="phrase"></div>
+        <div class="flex-container" style="gap:6px">
+            <button class="menu_button" type="button" id="copy-phrase" style="flex:1"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button class="menu_button" type="button" id="download-phrase" style="flex:1"><i class="fa-solid fa-download"></i> Save as file</button>
+        </div>
+        <label class="nimo-check"><input type="checkbox" id="saved-phrase"> <span>I've saved my recovery phrase somewhere safe.</span></label>
+        <button class="menu_button primary" type="button" id="enter-tavern" disabled><i class="fa-solid fa-door-open"></i> Enter my tavern</button>
+    </div>
+</main>

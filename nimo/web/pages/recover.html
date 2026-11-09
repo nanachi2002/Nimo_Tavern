@@ -1,0 +1,29 @@
+<!--TITLE Recover account · NimoTavern -->
+<!--NAV <a class="menu_button" href="/home">Home</a><a class="menu_button" href="/login">Log in</a> -->
+<!--HEAD <script type="module" src="/nimo/js/nimo-auth.js"></script> -->
+<main class="nimo-auth">
+    <form id="recover-form" class="nimo-glass" data-page="recover" autocomplete="off">
+        <h2><img src="/img/logo.png" alt=""> Recover your account</h2>
+        <div class="nimo-error" id="err"></div>
+        <p class="hint">Enter the 12-word recovery phrase you saved when you created your account, then choose a new password. You'll also get a new recovery phrase.</p>
+        <label>Username <input class="text_pole" name="username" autocomplete="username" required minlength="3" maxlength="32"></label>
+        <label>Recovery phrase <textarea class="text_pole" name="phrase" rows="3" required spellcheck="false" autocapitalize="off" placeholder="word1 word2 word3 …"></textarea></label>
+        <label>New password <input class="text_pole" name="password" type="password" autocomplete="new-password" required minlength="10"></label>
+        <div class="nimo-strength"><div id="strength"></div></div>
+        <label>Confirm new password <input class="text_pole" name="password2" type="password" autocomplete="new-password" required minlength="10"></label>
+        <button class="menu_button primary" type="submit"><i class="fa-solid fa-unlock-keyhole"></i> Recover account</button>
+        <div class="nimo-busy" id="busy"><i class="fa-solid fa-spinner fa-spin"></i> <span>Working…</span></div>
+    </form>
+
+    <div id="phrase-panel" class="panel nimo-glass" hidden>
+        <h2><i class="fa-solid fa-key nimo-quote"></i> Your new recovery phrase</h2>
+        <p class="hint">Your old phrase no longer works. Save these 12 words, because you won't see them again.</p>
+        <div class="nimo-phrase" id="phrase"></div>
+        <div class="flex-container" style="gap:6px">
+            <button class="menu_button" type="button" id="copy-phrase" style="flex:1"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button class="menu_button" type="button" id="download-phrase" style="flex:1"><i class="fa-solid fa-download"></i> Save as file</button>
+        </div>
+        <label class="nimo-check"><input type="checkbox" id="saved-phrase"> <span>I've saved my new recovery phrase.</span></label>
+        <button class="menu_button primary" type="button" id="enter-tavern" disabled><i class="fa-solid fa-door-open"></i> Enter my tavern</button>
+    </div>
+</main>

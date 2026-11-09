@@ -1,0 +1,15 @@
+<!--TITLE Log in · NimoTavern -->
+<!--NAV <a class="menu_button" href="/home">Home</a><a class="menu_button primary" href="/register">Create account</a> -->
+<!--HEAD <script type="module" src="/nimo/js/nimo-auth.js"></script> -->
+<main class="nimo-auth">
+    <form id="login-form" class="nimo-glass" data-page="login" autocomplete="on">
+        <h2><img src="/img/logo.png" alt=""> Welcome back</h2>
+        <div class="nimo-error" id="err"></div>
+        <label>Username <input class="text_pole" name="username" autocomplete="username" required minlength="3" maxlength="32" autofocus></label>
+        <label>Password <input class="text_pole" name="password" type="password" autocomplete="current-password" required></label>
+        <button class="menu_button primary" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Unlock my tavern</button>
+        <div class="nimo-busy" id="busy"><i class="fa-solid fa-spinner fa-spin"></i> <span>Deriving your key…</span></div>
+        <div class="links"><a href="/recover">Forgot password? Use your recovery phrase</a><a href="/register">No account yet?</a></div>
+        <p class="hint"><i class="fa-solid fa-lock"></i> Your password is processed only in this browser. NimoTavern receives a one-way login proof, never the password itself.</p>
+    </form>
+</main>

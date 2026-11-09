@@ -1,0 +1,27 @@
+// SillyTavern config.yaml used inside the Service Worker.
+export const SW_CONFIG = {
+    dataRoot: '/data',
+    listen: false,
+    enableUserAccounts: false,
+    enableDiscreetLogin: true,
+    enableServerPlugins: false,
+    enableServerPluginsAutoUpdate: false,
+    securityOverride: true,
+    allowKeysExposure: true, // keys stay in the user's own browser; lets the user view them in the UI
+    skipContentCheck: false,
+    enableExtensions: true,
+    enableExtensionsAutoUpdate: false,
+    enableDownloadableTokenizers: false,
+    thumbnails: { enabled: true, format: 'jpg', quality: 90, dimensions: { bg: [160, 90], avatar: [96, 144], persona: [96, 144] } },
+    performance: { lazyLoadCharacters: false, memoryCacheCapacity: '0mb', useDiskCache: false },
+    cacheBuster: { enabled: false },
+    backups: { common: { numberOfBackups: 20 }, chat: { enabled: true, checkIntegrity: true, maxTotalBackups: 50, throttleInterval: 10000 } },
+    extensions: { enabled: true, autoUpdate: false, models: { autoDownload: false } },
+    whitelistMode: false,
+    basicAuthMode: false,
+    logging: { enableAccessLog: false, minLogLevel: 2 },
+    sso: {},
+    requestProxy: { enabled: false },
+    autorun: false,
+    hostWhitelist: { enabled: false },
+};

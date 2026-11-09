@@ -1,0 +1,62 @@
+<!--TITLE NimoTavern: private SillyTavern for everyone -->
+<!--NAV <a class="menu_button" href="/privacy">How it works</a><a class="menu_button" href="/login">Log in</a><a class="menu_button primary" href="/register">Create account</a> -->
+<main class="nimo-wrap">
+    <section class="nimo-hero">
+        <img class="logo" src="/img/logo.png" alt="">
+        <h1>Your tavern. <em>Your eyes only.</em></h1>
+        <p class="lead">NimoTavern is a free, public SillyTavern instance where every chat, character, persona and API key is encrypted in your browser before it's saved. Not even the person running this server can read them.</p>
+        <div class="nimo-cta">
+            <a class="menu_button primary" href="/register"><i class="fa-solid fa-user-plus"></i>&nbsp; Create a free account</a>
+            <a class="menu_button" href="/login"><i class="fa-solid fa-right-to-bracket"></i>&nbsp; Log in</a>
+        </div>
+        <p class="nimo-muted" style="margin-top:14px;font-size:.9em">No email. No tracking. No ads. Just a username and a password.</p>
+    </section>
+
+    <div class="nimo-grid">
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-lock"></i> End-to-end encrypted</h3>
+            <p>Everything is sealed with AES-256 using a key derived from your password. The server only stores unreadable ciphertext, and even the file names are hidden.</p>
+        </div>
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-key"></i> Your API keys stay yours</h3>
+            <p>Requests to OpenRouter, OpenAI, Claude, Gemini, DeepSeek and others go straight from your browser to the provider. Your keys and prompts never pass through NimoTavern.</p>
+        </div>
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-bolt"></i> Fast</h3>
+            <p>Your tavern runs locally in your browser, so loading characters, swiping and editing chats feels instant. The interface is cached after your first visit.</p>
+        </div>
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-masks-theater"></i> The full SillyTavern</h3>
+            <p>The SillyTavern you know: character cards, group chats, World Info and lorebooks, presets, personas, themes, Quick Replies, regex, and more.</p>
+        </div>
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-mobile-screen"></i> Synced across devices</h3>
+            <p>Log in on your phone and your PC: your encrypted data syncs automatically. You can export everything as a standard SillyTavern backup whenever you like.</p>
+        </div>
+        <div class="nimo-card nimo-glass">
+            <h3><i class="fa-solid fa-code-branch"></i> Open source</h3>
+            <p>NimoTavern is a fork of SillyTavern under the AGPL-3.0. The code is public, so anyone can check that it does what it says.</p>
+        </div>
+    </div>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-shield-halved nimo-quote"></i> How your privacy is protected</h2>
+        <div class="nimo-flow">
+            <div class="step"><i class="fa-solid fa-keyboard"></i>You type your password</div>
+            <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+            <div class="step"><i class="fa-solid fa-microchip"></i>Your browser derives your encryption key (Argon2id)</div>
+            <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+            <div class="step"><i class="fa-solid fa-lock"></i>Chats &amp; cards are encrypted locally (AES-256-GCM)</div>
+            <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+            <div class="step"><i class="fa-solid fa-server"></i>The server stores only ciphertext</div>
+        </div>
+        <p>Your password never leaves your device. The server receives a separate login proof that can't be turned back into your password or your key. A database leak exposes only encrypted blobs.</p>
+        <p class="nimo-muted"><i class="fa-solid fa-triangle-exclamation"></i> That means if you lose your password <b>and</b> your recovery phrase, nobody can get your data back, including us. You get the recovery phrase when you sign up, so keep it safe. <a href="/privacy">Read the full details and limitations.</a></p>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-heart nimo-quote"></i> Built on SillyTavern</h2>
+        <p>NimoTavern exists thanks to <a href="https://github.com/SillyTavern/SillyTavern" target="_blank" rel="noopener">SillyTavern</a>, the LLM frontend for power users built by Cohee, RossAscends, Wolfsblvt and hundreds of contributors. All credit for the interface and features goes to them. NimoTavern adds accounts, end-to-end encryption, PostgreSQL storage and in-browser execution so a public instance can be run without seeing anyone's data.</p>
+        <p class="nimo-muted">If you can run SillyTavern on your own computer, that's still the most private option. NimoTavern is for when you can't, or want your tavern everywhere.</p>
+    </section>
+</main>

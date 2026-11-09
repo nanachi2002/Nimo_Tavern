@@ -1,0 +1,61 @@
+<!--TITLE Account · NimoTavern -->
+<!--NAV <a class="menu_button primary" href="/"><i class="fa-solid fa-door-open"></i> Back to my tavern</a> -->
+<!--HEAD <script type="module" src="/nimo/js/nimo-account.js"></script> -->
+<main class="nimo-wrap" style="max-width:720px">
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-user nimo-quote"></i> <span id="acc-name">Account</span></h2>
+        <p class="nimo-muted" id="acc-info">Loading…</p>
+        <div class="nimo-strength" style="height:8px"><div id="quota-bar" style="background:var(--SmartThemeUnderlineColor)"></div></div>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-route nimo-quote"></i> Provider connection</h2>
+        <p>By default your browser talks to AI providers <b>directly</b>, and NimoTavern never sees your prompts or keys. Some providers block requests from browsers (CORS). For those, you can turn on the NimoTavern relay.</p>
+        <p class="nimo-muted"><i class="fa-solid fa-triangle-exclamation"></i> With the relay, the request (prompt and API key) passes through this server's memory on its way to the provider. It's never logged or stored, but you have to trust the server while it's in transit. Leave it off unless you need it.</p>
+        <label class="nimo-check" style="display:flex"><input type="checkbox" id="relay-enabled"> <span>Use the relay as a fallback when a provider blocks direct requests</span></label>
+        <label class="nimo-check" style="display:flex;margin-top:6px"><input type="checkbox" id="relay-always"> <span>Always use the relay (hides your IP address from providers)</span></label>
+        <div id="relay-msg" class="nimo-muted" style="margin-top:6px"></div>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-key nimo-quote"></i> Change password</h2>
+        <form id="pw-form" class="flex-container flexFlowColumn" style="gap:8px;max-width:420px">
+            <input class="text_pole" name="current" type="password" placeholder="Current password" autocomplete="current-password" required>
+            <input class="text_pole" name="password" type="password" placeholder="New password (10+ characters)" autocomplete="new-password" minlength="10" required>
+            <input class="text_pole" name="password2" type="password" placeholder="Confirm new password" autocomplete="new-password" minlength="10" required>
+            <button class="menu_button" type="submit" style="width:auto">Change password</button>
+            <div class="nimo-error" id="pw-err"></div><div id="pw-ok"></div>
+        </form>
+        <p class="nimo-muted" style="font-size:.9em">Your data doesn't need re-encrypting: only the wrapper around your data key changes. Your other devices are logged out.</p>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-life-ring nimo-quote"></i> New recovery phrase</h2>
+        <p class="nimo-muted">Generate a new recovery phrase if you think your old one was exposed. The old one stops working.</p>
+        <form id="rec-form" class="flex-container" style="gap:8px;flex-wrap:wrap">
+            <input class="text_pole" name="current" type="password" placeholder="Current password" autocomplete="current-password" required style="flex:1;min-width:200px">
+            <button class="menu_button" type="submit" style="width:auto">Generate new phrase</button>
+        </form>
+        <div class="nimo-error" id="rec-err"></div>
+        <div id="rec-out" hidden style="margin-top:10px"><div class="nimo-phrase" id="phrase"></div><p class="nimo-muted">Save these words now, because they won't be shown again.</p></div>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2><i class="fa-solid fa-box-archive nimo-quote"></i> Your data</h2>
+        <div class="flex-container" style="gap:8px;flex-wrap:wrap">
+            <button class="menu_button" id="export" style="width:auto"><i class="fa-solid fa-download"></i> Export decrypted backup (.zip)</button>
+            <button class="menu_button" id="logout-all" style="width:auto"><i class="fa-solid fa-right-from-bracket"></i> Log out everywhere</button>
+        </div>
+        <p class="nimo-muted" style="font-size:.9em">The backup is decrypted in your browser and uses SillyTavern's folder layout, so you can import it into a local SillyTavern.</p>
+    </section>
+
+    <section class="nimo-section nimo-glass" style="border-color:var(--crimson70a)">
+        <h2><i class="fa-solid fa-trash" style="color:#ff8a8a"></i> Delete account</h2>
+        <p class="nimo-muted">This permanently erases your account and every encrypted blob from the server right away. It can't be undone.</p>
+        <form id="del-form" class="flex-container" style="gap:8px;flex-wrap:wrap">
+            <input class="text_pole" name="current" type="password" placeholder="Password" autocomplete="current-password" required style="flex:1;min-width:200px">
+            <button class="menu_button" type="submit" style="width:auto;background:var(--crimson70a)">Delete forever</button>
+        </form>
+        <div class="nimo-error" id="del-err"></div>
+    </section>
+</main>

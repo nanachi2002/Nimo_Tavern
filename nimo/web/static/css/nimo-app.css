@@ -1,0 +1,10 @@
+/* Small additions injected into the SillyTavern app itself. */
+#nimo-account-block { margin-top: 10px; padding: 10px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 10px; background: var(--black30a); }
+#nimo-account-block h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+#nimo-account-block .nimo-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#nimo-account-block .menu_button { width: auto; padding: 3px 10px; margin: 0; }
+#nimo-account-block small { color: var(--SmartThemeEmColor); display: block; margin-top: 6px; line-height: 1.4; }
+#nimo-sync-dot { position: fixed; right: 8px; bottom: 6px; z-index: 9999; font-size: 11px; color: var(--SmartThemeEmColor); opacity: .6; pointer-events: none; }
+#nimo-overlay { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: rgb(36, 36, 37); color: rgb(220, 220, 210); font-family: "Noto Sans", sans-serif; }
+#nimo-overlay img { width: 64px; animation: nimo-pulse 1.6s ease-in-out infinite; }
+@keyframes nimo-pulse { 50% { opacity: .5; } }

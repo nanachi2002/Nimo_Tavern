@@ -1,0 +1,54 @@
+<!--TITLE Privacy & security · NimoTavern -->
+<!--NAV <a class="menu_button" href="/home">Home</a><a class="menu_button" href="/login">Log in</a><a class="menu_button primary" href="/register">Create account</a> -->
+<main class="nimo-wrap" style="max-width:820px">
+    <section class="nimo-section nimo-glass">
+        <h1 style="margin-top:0"><i class="fa-solid fa-shield-halved nimo-quote"></i> Privacy &amp; security</h1>
+        <p>NimoTavern is built so that the server <b>can't</b> read your data, not just promises not to. Here's exactly how it works, and where its limits are.</p>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2>What the server stores</h2>
+        <ul>
+            <li><b>Your username</b>, and when the account was created.</li>
+            <li><b>Salts and a hash of your login proof.</b> The login proof is derived from your password in your browser (Argon2id, 64 MiB). The server hashes it again (scrypt). Your password itself is never sent.</li>
+            <li><b>Your data key, encrypted twice</b>: once with a key derived from your password, once with a key derived from your recovery phrase. Neither of those keys ever reaches the server.</li>
+            <li><b>Encrypted blobs</b>: each file (chat, character, setting, API keys…) is compressed and encrypted with AES-256-GCM. Blobs are named with an HMAC, so even file names and folder structure are hidden. We can see how many blobs you have and their sizes.</li>
+            <li><b>Session tokens</b>, stored hashed. They expire after 30 days.</li>
+        </ul>
+        <h2>What the server never stores</h2>
+        <ul>
+            <li>No email, real name, phone number or payment info.</li>
+            <li>No IP addresses or user agents in the database. The app doesn't write access logs. IPs are only held in memory for a few minutes for rate limiting, and only as salted hashes.</li>
+            <li>No analytics, trackers, ads or third-party scripts. The only exception is the Cloudflare Turnstile captcha on the sign-up page, if it's enabled.</li>
+        </ul>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2>Where SillyTavern runs</h2>
+        <p>Normally SillyTavern has a server that reads and writes your files and forwards your prompts and API keys to the AI provider. In NimoTavern that server code runs <b>inside your browser</b>, in a Service Worker, on top of an encrypted virtual file system. When you chat, your browser sends the request <b>directly</b> to the provider you set up (OpenRouter, OpenAI, Anthropic, Google, DeepSeek, Mistral, your own KoboldCpp…).</p>
+        <p><b>Optional relay:</b> some providers refuse requests coming from browsers. For those, you can turn on a relay in your account settings. It's off by default. With it on, the request passes through this server's memory without being logged or stored, but you have to trust the server for that request.</p>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2>Honest limitations</h2>
+        <ul>
+            <li><b>You trust the code you're served.</b> Like any web app, including web-based password managers, a malicious server operator could change the JavaScript to steal keys. NimoTavern is open source (AGPL-3.0) so the code can be audited. If you need zero trust, run SillyTavern locally.</li>
+            <li><b>Your AI provider sees your prompts.</b> Encryption protects your data <i>at rest</i> and from NimoTavern. The provider you send prompts to can still read them. Pick one whose policy you trust, or run a local model.</li>
+            <li><b>Your device holds the keys while you're logged in.</b> They're stored as non-exportable keys in your browser. Log out on shared computers: that wipes the keys and the local encrypted cache.</li>
+            <li><b>Lost password + lost recovery phrase = lost data.</b> There's no reset. That's the price of real end-to-end encryption.</li>
+            <li><b>Features that need server-side AI models are disabled</b> (vector storage, server-side image captioning and classification), because they would require plaintext on the server. Third-party extensions that need server-side installation aren't available yet.</li>
+            <li><b>Metadata:</b> the server can see when you're active, how much you store and when blobs change, but not what they contain.</li>
+        </ul>
+    </section>
+
+    <section class="nimo-section nimo-glass">
+        <h2>Cryptography summary</h2>
+        <ul class="nimo-muted">
+            <li>Password → Argon2id (m=64 MiB, t=3, p=1, random 128-bit salt) → HKDF-SHA256 → key-encryption key + login proof</li>
+            <li>Recovery: 12-word BIP39 phrase (128-bit entropy) → HKDF-SHA256 → key-encryption key + recovery proof</li>
+            <li>Data key: random 256-bit, wrapped with AES-256-GCM</li>
+            <li>Files: deflate → AES-256-GCM (random 96-bit IV) with the blob ID as associated data, IDs = HMAC-SHA256(path)</li>
+            <li>Transport: HTTPS only, HSTS, strict Content-Security-Policy, HttpOnly session cookies</li>
+        </ul>
+    </section>
+</main>

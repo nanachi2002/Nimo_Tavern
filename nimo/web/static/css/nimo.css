@@ -1,0 +1,106 @@
+/* NimoTavern pages. Built on top of SillyTavern's style.css (theme variables, .menu_button, .text_pole). */
+[hidden] { display: none !important; }
+html, body { height: auto; min-height: 100%; }
+body.nimo {
+    margin: 0;
+    background-color: var(--greyCAIbg);
+    background-image: linear-gradient(rgba(10, 10, 12, .55), rgba(10, 10, 12, .8)), url('/nimo-defaults/content/backgrounds/tavern%20day.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: var(--SmartThemeBodyColor);
+    font-family: var(--mainFontFamily);
+    font-size: var(--mainFontSize);
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: block;
+    position: static;
+}
+body.nimo * { box-sizing: border-box; }
+.nimo a { color: var(--SmartThemeUnderlineColor); }
+.nimo-glass {
+    background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor) 70%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    box-shadow: 0 0 20px var(--SmartThemeShadowColor);
+}
+
+/* top bar, styled like ST's #top-bar */
+.nimo-top {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 8px 16px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    box-shadow: 0 2px 20px 0 var(--black70a);
+}
+.nimo-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.15em; color: var(--SmartThemeBodyColor); text-decoration: none; }
+.nimo-brand img { width: 28px; height: 28px; }
+.nimo-brand .tag { font-size: .65em; font-weight: 400; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeEmColor); }
+.nimo-nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nimo-nav .menu_button { width: auto; padding: 4px 12px; margin: 0; text-decoration: none; white-space: nowrap; }
+.nimo-nav .menu_button.primary, .nimo .menu_button.primary { background-color: var(--okGreen70a); }
+
+.nimo-wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+.nimo-hero { text-align: center; padding: 56px 16px 36px; }
+.nimo-hero img.logo { width: 84px; height: 84px; filter: drop-shadow(0 0 18px var(--black70a)); }
+.nimo-hero h1 { font-size: clamp(2em, 5vw, 3.1em); margin: 12px 0 6px; }
+.nimo-hero h1 em { color: var(--SmartThemeQuoteColor); font-style: normal; }
+.nimo-hero p.lead { font-size: 1.15em; color: var(--SmartThemeBodyColor); max-width: 680px; margin: 0 auto 22px; opacity: .92; }
+.nimo-cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.nimo-cta .menu_button { width: auto; padding: 10px 22px; font-size: 1.05em; text-decoration: none; }
+
+.nimo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 24px 0; }
+.nimo-card { padding: 18px; }
+.nimo-card h3 { margin: 0 0 8px; display: flex; gap: 10px; align-items: center; font-size: 1.08em; }
+.nimo-card h3 i { color: var(--SmartThemeQuoteColor); width: 1.2em; text-align: center; }
+.nimo-card p { margin: 0; color: var(--SmartThemeEmColor); line-height: 1.5; }
+.nimo-section { padding: 22px; margin: 18px 0; }
+.nimo-section h2 { margin-top: 0; }
+.nimo-section p, .nimo-section li { line-height: 1.6; }
+.nimo-section li { margin: 4px 0; }
+.nimo-muted { color: var(--SmartThemeEmColor); }
+.nimo-quote { color: var(--SmartThemeQuoteColor); }
+
+.nimo-flow { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; justify-content: center; margin: 16px 0; }
+.nimo-flow .step { flex: 1 1 180px; padding: 12px; text-align: center; border: 1px dashed var(--SmartThemeBorderColor); border-radius: 8px; background: var(--black30a); }
+.nimo-flow .step i { font-size: 1.4em; color: var(--SmartThemeUnderlineColor); display: block; margin-bottom: 6px; }
+.nimo-flow .arrow { align-self: center; color: var(--SmartThemeEmColor); }
+
+/* auth forms, sized like ST's #dialogue_popup */
+.nimo-auth { min-height: calc(100vh - 52px); display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.nimo-auth form, .nimo-auth .panel { width: 100%; max-width: 440px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.nimo-auth h2 { margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+.nimo-auth h2 img { width: 30px; }
+.nimo-auth label { font-size: .9em; color: var(--SmartThemeEmColor); display: flex; flex-direction: column; gap: 4px; }
+.nimo-auth .text_pole { margin: 0; width: 100%; padding: 8px 10px; font-size: 1em; }
+.nimo-auth .menu_button { width: 100%; padding: 9px; margin: 4px 0 0; font-size: 1em; }
+.nimo-auth .links { display: flex; justify-content: space-between; font-size: .9em; flex-wrap: wrap; gap: 6px; }
+.nimo-auth .hint { font-size: .85em; color: var(--SmartThemeEmColor); line-height: 1.45; }
+.nimo-error { color: #ff8a8a; background: var(--crimson70a); border-radius: 6px; padding: 8px 10px; font-size: .92em; display: none; }
+.nimo-error.show { display: block; }
+.nimo-ok { color: #b9f3b9; background: var(--okGreen70a); border-radius: 6px; padding: 8px 10px; font-size: .92em; }
+.nimo-check { flex-direction: row !important; align-items: flex-start; gap: 8px !important; color: var(--SmartThemeBodyColor) !important; }
+.nimo-check input { margin-top: 3px; }
+.nimo-strength { height: 4px; border-radius: 2px; background: var(--grey30); overflow: hidden; }
+.nimo-strength > div { height: 100%; width: 0; transition: width .2s, background-color .2s; }
+
+.nimo-phrase { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; background: var(--black50a); border-radius: 8px; border: 1px solid var(--SmartThemeBorderColor); counter-reset: w; }
+.nimo-phrase span { font-family: var(--monoFontFamily); padding: 4px 6px; border-radius: 4px; background: var(--black30a); counter-increment: w; font-size: .95em; }
+.nimo-phrase span::before { content: counter(w) ". "; color: var(--SmartThemeEmColor); font-size: .8em; }
+
+.nimo-busy { display: none; align-items: center; gap: 8px; font-size: .9em; color: var(--SmartThemeEmColor); }
+.nimo-busy.show { display: flex; }
+
+.nimo-footer { text-align: center; padding: 24px 16px 32px; color: var(--SmartThemeEmColor); font-size: .88em; line-height: 1.7; }
+.nimo-footer a { color: var(--SmartThemeEmColor); }
+
+@media (max-width: 600px) {
+    .nimo-top { padding: 8px 10px; }
+    .nimo-brand .tag { display: none; }
+    .nimo-nav .menu_button { padding: 4px 8px; font-size: .9em; }
+    .nimo-phrase { grid-template-columns: repeat(2, 1fr); }
+    .nimo-flow .arrow { display: none; }
+}

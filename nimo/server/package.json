@@ -1,0 +1,7 @@
+{
+  "name": "nimotavern-server",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0",
+  "dependencies": { "express": "4.21.2", "pg": "8.13.1" }
+}
