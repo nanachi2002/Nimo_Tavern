@@ -1,5 +1,5 @@
 // Login / register / recover pages.
-import { api, unlockWithDek, passwordProof, showError, strengthMeter, showPhrase, swSupported, ensureServiceWorker } from './common.js';
+import { api, unlockWithDek, passwordProof, showError, strengthMeter, showPhrase, swSupported, ensureServiceWorker, unsupportedMessage } from './common.js';
 import { KDF_DEFAULT, randomBytes, b64, unb64, derivePasswordKeys, deriveRecoveryKeys, newRecoveryPhrase, isValidPhrase, wrapDek, unwrapDek } from '../../shared/crypto.js';
 import { scrypt } from 'hash-wasm';
 
@@ -16,8 +16,13 @@ function setBusy(on, text) {
     for (const i of form.querySelectorAll('input,textarea')) i.readOnly = on;
 }
 
-if (!swSupported()) showError(err, 'Your browser doesn\'t support the features NimoTavern needs (Service Workers, IndexedDB, WebCrypto). Try an up-to-date Firefox, Chrome or Safari, outside private browsing.');
-else ensureServiceWorker().catch(() => { }); // warm up early
+const supported = swSupported();
+if (!supported && form) {
+    // Block everything up front: never claim an account or create keys in a browser that can't run the tavern.
+    showError(err, unsupportedMessage());
+    form.addEventListener('submit', (e) => { e.preventDefault(); e.stopImmediatePropagation(); showError(err, unsupportedMessage()); }, true);
+    submitBtn.disabled = true;
+} else if (supported) ensureServiceWorker().catch(() => { }); // warm up early
 
 async function newPasswordMaterial(username, password) {
     const saltPw = randomBytes(16);

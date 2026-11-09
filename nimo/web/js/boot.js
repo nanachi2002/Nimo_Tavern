@@ -16,7 +16,7 @@
         return o;
     }
 
-    if (!('serviceWorker' in navigator)) {
+    if (!navigator.serviceWorker) { // undefined in iOS in-app browsers
         document.addEventListener('DOMContentLoaded', () => overlay('Your browser doesn\'t support Service Workers, which NimoTavern needs. (Private browsing often disables them.)'));
         return;
     }

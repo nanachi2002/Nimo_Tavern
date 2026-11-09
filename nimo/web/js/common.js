@@ -14,7 +14,16 @@ export async function api(path, body, method = body ? 'POST' : 'GET') {
     return data;
 }
 
-export function swSupported() { return 'serviceWorker' in navigator && 'indexedDB' in self && !!crypto?.subtle; }
+// In-app browsers on iOS (Discord, Instagram, Messenger...) expose navigator.serviceWorker as undefined.
+export function swSupported() { return !!navigator.serviceWorker && typeof navigator.serviceWorker.register === 'function' && !!self.indexedDB && !!self.crypto?.subtle; }
+
+export function unsupportedMessage() {
+    const ua = navigator.userAgent;
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const inApp = /FBAN|FBAV|Instagram|Discord|Line\/|Snapchat|Twitter|TikTok|musical_ly|GSA\//.test(ua) || (ios && !/Safari\//.test(ua));
+    if (inApp || ios) return 'This browser can\'t run NimoTavern. If you opened the link from an app (Discord, Instagram, Messenger…), tap the ••• or share button and choose "Open in Safari" (or Chrome), then log in again. Private browsing can also block it.';
+    return 'Your browser doesn\'t support the features NimoTavern needs (Service Workers, IndexedDB, WebCrypto). Use an up-to-date Firefox, Chrome, Edge or Safari, outside private browsing.';
+}
 
 /** Registers the NimoTavern Service Worker and resolves once it controls this page. */
 export async function ensureServiceWorker() {
