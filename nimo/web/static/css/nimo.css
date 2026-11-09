@@ -40,6 +40,8 @@ body.nimo * { box-sizing: border-box; }
 .nimo-brand img { width: 28px; height: 28px; }
 .nimo-brand .tag { font-size: .65em; font-weight: 400; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeEmColor); }
 .nimo-nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* SillyTavern's .menu_button is a flex box, which drops the space between an icon and its label: use a gap. */
+.nimo .menu_button { gap: .45em; }
 .nimo-nav .menu_button { width: auto; padding: 4px 12px; margin: 0; text-decoration: none; white-space: nowrap; }
 .nimo-nav .menu_button.primary, .nimo .menu_button.primary { background-color: var(--okGreen70a); }
 
