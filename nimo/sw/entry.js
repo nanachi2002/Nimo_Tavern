@@ -54,7 +54,11 @@ async function loadDefaults() {
         }
         return new Uint8Array(await res.arrayBuffer());
     };
+    // Needed in the middle of requests that have already written files (V2 JSON / CHARX imports, creating a
+    // character without a picture), where a lazy load can't be retried: load it up front (small, cached).
+    await vfs.resolveRefs(EAGER_DEFAULTS.filter((p) => vfs.files.has(p))).catch((e) => console.warn('[nimo] default avatar not preloaded', e));
 }
+const EAGER_DEFAULTS = ['/public/img/ai4.png'];
 
 function loadNimoSettings() {
     try {

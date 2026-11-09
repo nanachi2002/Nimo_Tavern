@@ -646,6 +646,9 @@ function buildDefaultsBundle() {
     }
     const tk = path.join(NIMO_DIST, 'nimo/tiktoken');
     if (fs.existsSync(tk)) for (const f of fs.readdirSync(tk)) files.push({ path: 'tiktoken/' + f, vfs: '/srv/tiktoken/' + f, url: '/nimo/tiktoken/' + f, size: fs.statSync(path.join(tk, f)).size });
+    // Default character avatar: SillyTavern's server reads it for cards without a picture (JSON/YAML/CHARX/BYAF
+    // imports, "create character" without an image). Without it those imports fail with "invalid or corrupted".
+    files.push({ path: 'public/img/ai4.png', vfs: '/public/img/ai4.png', url: '/img/ai4.png', size: fs.statSync(path.join(ROOT, 'public/img/ai4.png')).size });
     // Built-in extension manifests (SillyTavern discovers extensions by listing this folder).
     const extDir = path.join(ROOT, 'public/scripts/extensions');
     for (const name of fs.readdirSync(extDir)) {
