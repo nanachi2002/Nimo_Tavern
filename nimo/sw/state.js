@@ -4,4 +4,5 @@ export const nimoState = {
     username: null,
     relayEnabled: false,
     relayAlways: false,
+    optimizeImages: true, // convert uploaded PNG/JPEG pictures to WebP (saves storage); user can turn it off in Account
 };

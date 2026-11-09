@@ -6,6 +6,7 @@ import { nimoState } from './state.js';
 import { loadKeys, wipeLocal } from '../shared/crypto.js';
 import { createReq, createRes } from './shims/express.js';
 import { Unzip, UnzipInflate } from 'fflate';
+import { isOptimizableMultipart, isOptimizableJson, optimizeUploadedFile, optimizeImageBody } from './imgopt.js';
 
 const BUILD = __NIMO_BUILD__;
 const STATIC_CACHE = 'nimo-static-' + BUILD;
@@ -61,6 +62,7 @@ function loadNimoSettings() {
             const s = JSON.parse(vfs.readFileSync(NIMO_SETTINGS, 'utf8'));
             nimoState.relayEnabled = !!s.relayEnabled;
             nimoState.relayAlways = !!s.relayAlways;
+            nimoState.optimizeImages = s.optimizeImages !== false; // on unless explicitly turned off
         }
     } catch { /* ignore */ }
 }
@@ -251,9 +253,14 @@ function isAppPath(p) {
 async function parseBody(request) {
     if (request.method === 'GET' || request.method === 'HEAD') return { body: {} };
     const ct = request.headers.get('content-type') || '';
+    const pathname = new URL(request.url).pathname;
     if (ct.includes('application/json')) {
         const t = await request.text();
-        try { return { body: t ? JSON.parse(t) : {} }; } catch { return { body: {}, bad: true }; }
+        let body;
+        try { body = t ? JSON.parse(t) : {}; } catch { return { body: {}, bad: true }; }
+        // Chat / generated pictures arrive as base64: store PNG/JPEG as WebP (smaller encrypted blobs).
+        if (nimoState.optimizeImages && isOptimizableJson(pathname)) await optimizeImageBody(body);
+        return { body };
     }
     if (ct.includes('multipart/form-data')) {
         const fd = await request.formData();
@@ -263,8 +270,15 @@ async function parseBody(request) {
             else if (!file) {
                 const name = crypto.randomUUID().replace(/-/g, '');
                 const p = '/data/_uploads/' + name;
-                vfs.writeFileSync(p, new Uint8Array(await v.arrayBuffer()));
-                file = { fieldname: k, originalname: v.name, encoding: '7bit', mimetype: v.type, destination: '/data/_uploads', filename: name, path: p, size: v.size };
+                let bytes = new Uint8Array(await v.arrayBuffer());
+                let originalname = v.name, mimetype = v.type;
+                // Backgrounds and sprites: PNG/JPEG -> WebP (the extension is rewritten with it).
+                if (nimoState.optimizeImages && isOptimizableMultipart(pathname)) {
+                    const o = await optimizeUploadedFile(bytes, v.name);
+                    if (o) ({ bytes, name: originalname, type: mimetype } = o);
+                }
+                vfs.writeFileSync(p, bytes);
+                file = { fieldname: k, originalname, encoding: '7bit', mimetype, destination: '/data/_uploads', filename: name, path: p, size: bytes.length };
             }
         }
         return { body, file };
@@ -327,14 +341,18 @@ async function handleLocal(request) {
         const keys = await loadKeys();
         if (!keys?.encKey) return json(200, { unlocked: false });
         try { await ensureBooted(); } catch (e) { return json(200, { unlocked: false, error: e.message }); }
-        return json(200, { unlocked: true, ready: nimoState.ready, username: nimoState.username, relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, quota: store?.quota, pending: vfs.dirty.size });
+        return json(200, { unlocked: true, ready: nimoState.ready, username: nimoState.username, relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages, quota: store?.quota, pending: vfs.dirty.size });
     }
     if (url.pathname === '/api/nimo-local/settings' && request.method === 'POST') {
         await ensureBooted();
         const s = await request.json();
-        nimoState.relayEnabled = !!s.relayEnabled;
-        nimoState.relayAlways = !!s.relayEnabled && !!s.relayAlways;
-        vfs.writeFileSync(NIMO_SETTINGS, JSON.stringify({ relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways }));
+        // Each setting is only changed when present, so one toggle can't reset the others.
+        if ('relayEnabled' in s) {
+            nimoState.relayEnabled = !!s.relayEnabled;
+            nimoState.relayAlways = !!s.relayEnabled && !!s.relayAlways;
+        }
+        if ('optimizeImages' in s) nimoState.optimizeImages = !!s.optimizeImages;
+        vfs.writeFileSync(NIMO_SETTINGS, JSON.stringify({ relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages }));
         await store.flush();
         return json(200, { ok: true });
     }

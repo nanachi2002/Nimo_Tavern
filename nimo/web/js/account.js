@@ -17,7 +17,13 @@ async function init() {
     $('#relay-enabled').checked = !!st.relayEnabled;
     $('#relay-always').checked = !!st.relayAlways;
     $('#relay-always').disabled = !st.relayEnabled;
+    $('#img-optimize').checked = st.optimizeImages !== false;
 }
+
+$('#img-optimize').addEventListener('change', async () => {
+    const r = await fetch('/api/nimo-local/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ optimizeImages: $('#img-optimize').checked }) });
+    $('#img-msg').textContent = r.ok ? 'Saved (encrypted, synced to your other devices). Applies to new uploads only.' : 'Could not save.';
+});
 
 async function saveRelay() {
     const relayEnabled = $('#relay-enabled').checked;
