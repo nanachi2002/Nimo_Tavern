@@ -1,0 +1,114 @@
+<!--TITLE Multiplayer -->
+<!--ICON fa-solid fa-dice-d20 -->
+<!--GROUP Connect & chat -->
+<!--DESC Roleplay with up to 5 friends and one AI character, turn by turn, like a tabletop game. A NimoTavern feature. -->
+<p><b>Multiplayer</b> is a NimoTavern feature (it's not part of SillyTavern). Up to <b>6 players</b>, each with their own persona, share one scene with an AI character and take turns, like a tabletop RPG. The host sets up the world, the lorebooks and the AI. Everyone else just joins and plays, live or at their own pace.</p>
+
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Multiplayer is not end-to-end encrypted</strong>
+<p>Your solo chats never leave your browser unencrypted. Multiplayer can't work that way: to run the AI for the whole group, even when the host is offline, the server reads the session while it writes the prompt. Sessions are encrypted at rest, never logged, and deleted when the host ends them. <a href="/privacy#multiplayer">All the details</a>.</p></div></div>
+
+<h2>Starting a session (host)</h2>
+<ol class="steps">
+    <li><b>Open a chat</b> with the character you want as the AI (any character, and your existing messages can come along).</li>
+    <li>Open the <i class="fa-solid fa-bars"></i> <b>chat options</b> menu (left of the message box) and choose <i class="fa-solid fa-dice-d20"></i> <b>Make multiplayer…</b></li>
+    <li><b>Read the privacy note</b> and tick the box.</li>
+    <li><b>Set up the AI for the session.</b> This is a separate connection from your solo one: pick a provider (OpenRouter, OpenAI, DeepSeek, Claude, Gemini or any OpenAI-compatible proxy), a model and an <b>API key you only use for multiplayer</b>. Click <i>Test connection</i>.</li>
+    <li><b>Choose the rules</b> (turn mode, number of players, an optional turn timer), write the <b>world setting</b> and tick the <b>lorebooks</b> the AI should use.</li>
+    <li><b>Invite friends</b> by their NimoTavern username and click <b>Start multiplayer</b>.</li>
+</ol>
+
+<!--nosearch-->
+<div class="demo" data-title="Inviting a friend">
+<div class="demo-stage"><div class="mk" style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
+<div class="nimo-glass" style="padding:10px;display:flex;flex-direction:column;gap:8px"><b><i class="fa-solid fa-crown" style="color:#e6c35c"></i> Host's tavern</b>
+  <div class="mk-card js-opt"><i class="fa-solid fa-dice-d20" style="font-size:20px;color:var(--SmartThemeQuoteColor)"></i><div><b>Make multiplayer…</b><small>chat options menu</small></div></div>
+  <div class="mk-card js-ai" data-hide><i class="fa-solid fa-plug" style="font-size:20px"></i><div><b>OpenRouter · deepseek-chat</b><small>multiplayer key · <span style="color:#5cb85c">connected</span></small></div></div>
+  <div class="mk-card js-world" data-hide><i class="fa-solid fa-earth-europe" style="font-size:20px"></i><div><b>World + 2 lorebooks</b><small>only the AI sees them</small></div></div>
+  <div class="mk-card js-inv" data-hide><i class="fa-solid fa-envelope" style="font-size:20px"></i><div><b class="js-invname">Invite: </b><small>by NimoTavern username</small></div></div>
+</div>
+<div class="nimo-glass" style="padding:10px;display:flex;flex-direction:column;gap:8px"><b><i class="fa-solid fa-user" style="color:#7bd62a"></i> Friend's tavern</b>
+  <div class="mk-card js-badge"><i class="fa-solid fa-user-gear" style="font-size:20px"></i><div><b>User Settings</b><small class="js-badgetxt">no new mail</small></div></div>
+  <div class="mk-card js-mail" data-hide style="border-color:var(--SmartThemeQuoteColor)"><i class="fa-solid fa-dice-d20" style="font-size:20px;color:var(--SmartThemeQuoteColor)"></i><div><b>@ciel invites you to play Ember Isle</b><small>Ordered rounds · 1/6 players</small><span class="js-acc" style="display:inline-block;margin-top:4px;padding:2px 10px;border-radius:6px;background:var(--okGreen70a)">Accept</span></div></div>
+  <div class="mk-card js-persona" data-hide><i class="fa-solid fa-masks-theater" style="font-size:20px"></i><div><b>Play as: Aria</b><small>elf archer · persona picked in the tavern</small></div></div>
+  <div class="mk-card js-joined" data-hide><i class="fa-solid fa-check" style="font-size:20px;color:#5cb85c"></i><div><b>Ember Isle</b><small>now in the character list, like any chat</small></div></div>
+</div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"In a chat, the host opens the chat options menu and picks Make multiplayer.","at":".js-opt","act":"click","wait":700},
+ {"say":"The session gets its own AI connection, with a key used only for multiplayer.","show":[".js-ai"],"wait":1200},
+ {"say":"The world setting and lorebooks are for the AI only: players never see them, like a game master's notes.","show":[".js-world"],"wait":1300},
+ {"say":"The host invites a friend by username.","show":[".js-inv"],"act":"type","into":".js-invname","text":"Invite: @aria_plays","wait":700},
+ {"say":"The friend sees a badge on the User Settings and Account buttons.","at":".js-badge","act":"none","set":{".js-badgetxt":"<b style='color:var(--SmartThemeQuoteColor)'>1 new in your mailbox</b>"},"wait":1100},
+ {"say":"In Account → Mailbox: the invite, with Accept, Decline and Block.","show":[".js-mail"],"at":".js-acc","act":"click","wait":800},
+ {"say":"Back in the tavern, they choose which persona to play.","show":[".js-persona"],"wait":1100},
+ {"say":"The session appears in their character list. Every player keeps their own copy of the chat.","show":[".js-joined"],"wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Joining (players)</h2>
+<p>When someone invites you, a small badge appears on the <i class="fa-solid fa-user-gear"></i> <b>User Settings</b> button and on <b>Account</b>. Open <b>Account → Mailbox</b>, read the privacy note and <b>Accept</b>. When you open your tavern, it asks <b>which persona you want to play</b>: the others see that persona's name, picture and description. The session then shows up in your character list as a chat with the AI character.</p>
+<p>You can <b>Decline</b>, or <b>Block</b> someone so they can't invite you again. In <i>Invite settings</i> you can turn invites off completely.</p>
+
+<h2>Playing</h2>
+<p>A <b>players bar</b> sits above the chat: the AI and every player, a glow around whoever's turn it is, a <i class="fa-solid fa-check"></i> for players who already played this round, and a green ring around people who are online right now. When it's your turn, the bar says <b>Your turn!</b> and you write your action in the normal message box.</p>
+
+<!--nosearch-->
+<div class="demo" data-title="A round of play">
+<div class="demo-stage"><div class="mk"><div class="mk-body" style="flex-direction:column">
+<div class="mk-seats"><span class="mk-seat ai js-s0">Mira</span><span class="mk-seat js-s1">Hostia <i class="fa-solid fa-crown" style="color:#e6c35c"></i></span><span class="mk-seat js-s2">Aria</span><span class="mk-seat js-s3">Bob</span><small class="js-status" style="margin-left:auto;color:var(--SmartThemeEmColor)">Round 1 · Ordered rounds</small></div>
+<div class="mk-chat">
+<div class="mk-msg js-m0"><div class="av">M</div><div><div class="nm">Mira</div><div class="tx"><em>*The storm hits the ship.*</em> “Everyone, hold on!”</div></div></div>
+<div class="mk-msg user js-m1" data-hide><div class="av" style="background:linear-gradient(135deg,#a77,#744)">H</div><div><div class="nm">Hostia</div><div class="tx">I grab the wheel and steer into the wave.</div></div></div>
+<div class="mk-msg user js-m2" data-hide style="opacity:.7"><div class="av" style="background:linear-gradient(135deg,#7a7,#474)">B</div><div><div class="nm">Bob</div><div class="tx"><i>((OOC: brb 2 min!))</i></div></div></div>
+<div class="mk-msg user js-m3" data-hide><div class="av" style="background:linear-gradient(135deg,#79c,#457)">A</div><div><div class="nm">Aria</div><div class="tx">I tie myself to the mast and watch for rocks.</div></div></div>
+<div class="mk-msg js-m4" data-hide><div class="av">M</div><div><div class="nm">Mira</div><div class="tx js-ai"></div></div></div>
+</div></div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"Ordered rounds: after the AI, Hostia plays first.","add":{".js-s1":"turn"},"wait":900},
+ {"say":"Hostia writes her action. Only the player whose turn it is can post.","at":".js-input","act":"type","text":"I grab the wheel and steer into the wave."},
+ {"say":"Sent: it's Aria's turn now.","at":".js-send","act":"click","set":{".js-input":""},"show":[".js-m1"],"rm":{".js-s1":"turn"},"add":{".js-s1":"done",".js-s2":"turn"},"wait":800},
+ {"say":"Anyone can talk out of character at any time with ((double parentheses)). The AI never sees it.","show":[".js-m2"],"wait":1300},
+ {"say":"Aria plays…","show":[".js-m3"],"rm":{".js-s2":"turn"},"add":{".js-s2":"done",".js-s3":"turn"},"wait":900},
+ {"say":"Bob is away, so he passes (or the host skips him, or a turn timer does).","rm":{".js-s3":"turn"},"add":{".js-s3":"done",".js-s0":"turn"},"set":{".js-status":"Mira is writing…"},"wait":900},
+ {"say":"Everyone has played: the AI answers the whole round, streamed live to every player.","show":[".js-m4"],"act":"stream","into":".js-ai","text":"<em>*Mira laughs into the rain.*</em> “Good hands, Hostia! Aria, shout if you see the reef!”","wait":800},
+ {"say":"Round 2 starts.","rm":{".js-s0":"turn",".js-s1":"done",".js-s2":"done",".js-s3":"done"},"add":{".js-s1":"turn"},"set":{".js-status":"Round 2 · Ordered rounds"},"wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Turn modes</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Mode</th><th>How it goes</th><th>Good for</th></tr>
+<tr><td><b>Ordered rounds</b> (default)</td><td>AI → player 1 → player 2 → … → AI. Everyone plays once, in order, then the AI answers the whole round.</td><td>Classic tabletop feel, scenes where order matters</td></tr>
+<tr><td><b>Free rounds</b></td><td>Everyone plays once per round, in any order. The AI answers once all players have posted (or when the host presses <i>AI now</i>).</td><td>Groups that aren't all online at once</td></tr>
+<tr><td><b>Strict alternation</b></td><td>Player 1 → AI → player 2 → AI → … The AI answers after every player.</td><td>Small groups, fast back-and-forth</td></tr>
+</table></div>
+<p>The host can also set a <b>turn timer</b> (5 minutes, 1 hour, 24 hours) after which a silent player is skipped automatically. It's off by default, so the game can wait for everyone.</p>
+
+<h2>Host controls</h2>
+<p>The host gets a <i class="fa-solid fa-gear"></i> <b>Session</b> button in the players bar:</p>
+<ul>
+    <li><b>Players:</b> invite more people, change the turn order, remove a player.</li>
+    <li><b>Turns:</b> <i>AI now</i> (make the AI answer right away), <i>Skip</i> the current player, <i>Pause</i> / <i>Resume</i>, <i>Reroll</i> the last AI reply, <i>Stop</i> a reply that's going wrong.</li>
+    <li><b>Messages:</b> edit or delete any message with SillyTavern's usual <i class="fa-solid fa-pencil"></i> pencil.</li>
+    <li><b>Settings:</b> change the rules, the AI connection, the world setting, the lorebooks and the prompt at any time.</li>
+    <li><b>End the session:</b> deletes everything stored on the server for it, for everyone. Each player keeps their own copy of the chat.</li>
+</ul>
+<p>Players can <b>pass</b> their turn, edit or delete their own last message until the AI answers, and <b>leave</b> the session from the <i class="fa-solid fa-circle-info"></i> <b>Session</b> button.</p>
+
+<h2>What players see (and don't)</h2>
+<ul>
+    <li><b>Players see:</b> the chat, the AI character's name and picture, and everyone's persona name, picture and description.</li>
+    <li><b>Only the AI sees:</b> the character definition, the world setting, the lorebooks and the prompt. Players can't read spoilers.</li>
+    <li><b>Nobody but the server sees:</b> the host's multiplayer API key. It's stored encrypted and used only to run that session.</li>
+</ul>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">A key just for multiplayer</strong>
+<p>The multiplayer key is used by the server for everyone's turns. Create a separate key with your provider, give it a <b>spending limit</b>, and keep your main key for solo play (where it never leaves your browser).</p></div></div>
+
+<h2>Good to know</h2>
+<ul>
+    <li>Multiplayer works with one AI character per session. For several AI characters in one scene, use a <a href="/wiki/groups">group chat</a> (solo).</li>
+    <li>The AI uses a simplified version of SillyTavern's prompt: main prompt, character card, world setting, lorebook entries that match the recent messages, everyone's personas, example messages, recent history and a final instruction. Solo-only features like extensions, Author's Note and presets don't apply to it.</li>
+    <li>Sessions with no activity for 90 days are deleted from the server.</li>
+</ul>

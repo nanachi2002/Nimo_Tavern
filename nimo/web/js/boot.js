@@ -113,6 +113,23 @@
                 wiki.after(st);
             }).catch(() => { });
         }
+        // Mailbox badge: multiplayer invites and notices waiting on the Account page.
+        async function refreshBadge() {
+            let n = 0;
+            try { const r = await fetch('/api/nimo/mp/inbox/count', { credentials: 'same-origin' }); if (r.ok) n = (await r.json()).n || 0; } catch { return; }
+            for (const host of [document.querySelector('#user-settings-button .drawer-toggle'), document.getElementById('account_button')]) {
+                if (!host) continue;
+                let b = host.querySelector(':scope > .nimo-badge');
+                if (!n) { b?.remove(); continue; }
+                if (!b) { b = document.createElement('span'); b.className = 'nimo-badge'; host.append(b); }
+                b.textContent = n > 9 ? '9+' : String(n);
+                b.title = `${n} new in your mailbox (Account)`;
+            }
+            if (acct) acct.title = n ? `NimoTavern account: ${n} new in your mailbox` : 'NimoTavern account, privacy & encryption';
+        }
+        refreshBadge();
+        setInterval(refreshBadge, 60_000);
+        window.addEventListener('nimo-inbox', refreshBadge); // pushed live by the multiplayer extension
         const ver = document.getElementById('version_display');
         if (ver) {
             const note = document.createElement('small');

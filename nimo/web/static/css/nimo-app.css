@@ -10,3 +10,7 @@
 @keyframes nimo-pulse { 50% { opacity: .5; } }
 #nimo_wiki_button { text-decoration: none; color: inherit; }
 #nimo_stats_button { text-decoration: none; color: inherit; }
+/* Mailbox badge (multiplayer invites and notices) on the User Settings toggle and the Account button. */
+#user-settings-button .drawer-toggle, #account_button { position: relative; }
+.nimo-badge { position: absolute; top: -4px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--SmartThemeQuoteColor, #e18a24); color: #111; font: bold 10px/16px var(--mainFontFamily, sans-serif); text-align: center; pointer-events: none; box-shadow: 0 0 0 2px var(--SmartThemeBlurTintColor, #222); }
+#account_button .nimo-badge { top: -6px; right: -6px; }

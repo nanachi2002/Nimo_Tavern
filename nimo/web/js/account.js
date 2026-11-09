@@ -1,5 +1,6 @@
 // Account page: relay preference, password change, recovery rotation, export, deletion.
 import { api, passwordProof, showError, swMessage, ensureServiceWorker } from './common.js';
+import { initMailbox } from './mailbox.js';
 import { KDF_DEFAULT, randomBytes, b64, derivePasswordKeys, deriveRecoveryKeys, newRecoveryPhrase, wrapDek, unwrapDek, wipeLocal } from '../../shared/crypto.js';
 
 const $ = (s) => document.querySelector(s);
@@ -116,3 +117,4 @@ $('#del-form').addEventListener('submit', async (e) => {
 });
 
 init();
+initMailbox();

@@ -42,6 +42,21 @@
         </ul>
     </section>
 
+    <section class="nimo-section nimo-glass" id="multiplayer">
+        <h2><i class="fa-solid fa-dice-d20 nimo-quote"></i> Multiplayer sessions</h2>
+        <p><b>Multiplayer works differently from solo chats, and it is not end-to-end encrypted.</b> To run the AI for a group, even when the host is offline, the server has to build the prompt itself. While it does, it reads the session: the character, the world setting, the lorebook, every player's messages and persona (name, picture, description), and the host's multiplayer API key.</p>
+        <ul>
+            <li><b>Encrypted at rest.</b> Each session has its own random key, wrapped with a server key. Everything with content (settings, messages, personas, pictures, the API key) is stored encrypted with AES-256-GCM. A database dump or backup alone reveals nothing.</li>
+            <li><b>Never logged.</b> Prompts, replies and keys are only in memory while the AI writes. Errors show the host only the provider's status.</li>
+            <li><b>Deleted for good</b> when the host ends the session, when the host's account is deleted, or after 90 days without activity.</li>
+            <li><b>What the server can see in plain form:</b> who is in which session and who invited whom (usernames), the turn order and round number. Never the content of your solo chats.</li>
+            <li><b>Players only see what's on screen.</b> The character definition, world setting, lorebook and API key stay with the host and are never sent to players.</li>
+            <li><b>Use a separate API key</b> for multiplayer. Your solo key never leaves your browser; the multiplayer key has to be stored on the server for the session to run. Set a spending limit on it with your provider.</li>
+            <li><b>Invites are optional.</b> You can turn invites off or block someone in your Account mailbox. Inviting an unknown or unreachable username always gives the same answer, so usernames can't be probed this way.</li>
+        </ul>
+        <p class="nimo-muted">In short: the operator could technically read a multiplayer session while it runs. If that's not OK for a story, keep it solo.</p>
+    </section>
+
     <section class="nimo-section nimo-glass">
         <h2>Cryptography summary</h2>
         <ul class="nimo-muted">

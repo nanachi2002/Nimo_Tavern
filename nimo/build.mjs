@@ -175,6 +175,14 @@ export async function buildWeb({ minify = true } = {}) {
         bundle: true, format: 'iife', platform: 'browser', target: ['chrome110', 'firefox115', 'safari16'],
         outdir: path.join(here, 'dist/public/nimo/js'), minify, logLevel: 'info', loader: { '.wasm': 'binary' },
     });
+    // Multiplayer: a SillyTavern extension (ES module; imports from SillyTavern's own scripts stay external).
+    const mpOut = path.join(here, 'dist/public/nimo/mp');
+    fs.mkdirSync(mpOut, { recursive: true });
+    await esbuild.build({
+        entryPoints: [path.join(here, 'web/mp/index.js')], bundle: true, format: 'esm', platform: 'browser', target: ['chrome110', 'firefox115', 'safari16'],
+        external: ['../../../*'], outfile: path.join(mpOut, 'index.js'), minify, logLevel: 'info',
+    });
+    for (const f of ['manifest.json', 'style.css']) fs.copyFileSync(path.join(here, 'web/mp', f), path.join(mpOut, f));
     buildPages();
     buildWiki();
 }

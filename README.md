@@ -16,13 +16,14 @@
 
 NimoTavern is SillyTavern, the roleplay and chat frontend for AI models, hosted for everyone. You make an account with just a username and a password, and you get the full SillyTavern in your browser on any device.
 
-The difference from a normal hosted instance is that **the person running the server cannot read your data**. Your chats, characters, personas, lorebooks, settings and API keys are encrypted in your browser before they're saved. The server only ever stores unreadable blobs.
+The difference from a normal hosted instance is that **the person running the server cannot read your data**. Your chats, characters, personas, lorebooks, settings and API keys are encrypted in your browser before they're saved. The server only ever stores unreadable blobs. (Multiplayer sessions are the one opt-in exception; see below.)
 
 - 🔒 **End-to-end encrypted.** AES-256-GCM, with a key derived from your password (Argon2id). Even file names are hidden.
-- 🔑 **Your API keys stay yours.** Requests to OpenRouter, OpenAI, Claude, Gemini, DeepSeek and others go straight from your browser to the provider. They never pass through NimoTavern.
+- 🔑 **Your API keys stay yours.** Requests to OpenRouter, OpenAI, Claude, Gemini, DeepSeek and others go straight from your browser to the provider. They never pass through NimoTavern (the only exception is a key you choose to give a [multiplayer](#multiplayer-nimotavern-only) session).
 - 🕵️ **No email, no tracking, no ads.** No IPs, user agents or access logs are stored.
 - ⚡ **Fast.** The tavern runs locally in your browser, so swiping, editing and switching characters feels instant.
 - 🔄 **Synced across devices.** Log in on your phone and your PC. You can export everything as a standard SillyTavern backup whenever you want.
+- 🎲 **Multiplayer.** Up to 6 friends and one AI character, turn by turn ([see below](#multiplayer-nimotavern-only)).
 - 🧩 **The SillyTavern you know.** Character cards, group chats, World Info, presets, personas, themes, Quick Replies, regex, extensions and more.
 
 ## How it works
@@ -97,6 +98,21 @@ Everything you'd use in a local SillyTavern works, because it *is* SillyTavern's
 <td><b>Lorebooks and World Info</b><br><img src=".github/readme/lorebook.gif" alt="Adding a lorebook entry"></td>
 </tr>
 </table>
+
+## Multiplayer (NimoTavern only)
+
+NimoTavern's own feature: **up to 6 players**, each with their own persona, roleplay with one AI character **turn by turn**, like a tabletop game. Players can be online together or take their turns at their own pace.
+
+- **Hosting:** the host turns any chat into a session from the chat options menu. They set the world setting, the lorebooks, the turn rules (ordered rounds, free rounds or strict alternation, with an optional turn timer) and a **separate AI connection just for multiplayer**.
+- **Joining:** friends are invited by username. The invite lands in their **Account → Mailbox**, with a badge on the Account button. Accepting adds the session to their character list like any other chat.
+- **What players see:** only what's on screen. The character definition, world setting, lorebooks and API key stay with the host.
+
+<div align="center">
+<img src=".github/readme/mp-invite.gif" alt="Inviting a friend to a multiplayer session" width="49%"> <img src=".github/readme/mp-round.gif" alt="A round of multiplayer play" width="49%">
+</div>
+
+> [!WARNING]
+> **Multiplayer is not end-to-end encrypted.** To run the AI for the whole group, even when the host is offline, the server reads the session while it writes the prompt, using the host's multiplayer key. Sessions are encrypted at rest with their own key, never logged, and deleted when the host ends them (or after 90 days without activity). Solo chats don't change: they stay end-to-end encrypted. [Details](https://nimorp.lol/privacy#multiplayer)
 
 ### Limitations, honestly
 

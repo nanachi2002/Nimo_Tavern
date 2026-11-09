@@ -8,6 +8,18 @@
         <div class="nimo-strength" style="height:8px"><div id="quota-bar" style="background:var(--SmartThemeUnderlineColor)"></div></div>
     </section>
 
+    <section class="nimo-section nimo-glass" id="mailbox">
+        <h2><i class="fa-solid fa-envelope nimo-quote"></i> Mailbox <span class="nimo-mail-count" id="mail-count" hidden></span></h2>
+        <div id="mail-invites"></div>
+        <div id="mail-notices"></div>
+        <p class="nimo-muted" id="mail-empty">No invites or news. When a friend invites you to a multiplayer session, it shows up here.</p>
+        <details class="nimo-mail-settings">
+            <summary class="nimo-muted">Invite settings</summary>
+            <label class="nimo-check" style="display:flex;margin-top:8px"><input type="checkbox" id="mail-allow"> <span>Let other players invite me to multiplayer sessions by my username</span></label>
+            <div id="mail-blocked" class="nimo-muted" style="margin-top:6px"></div>
+        </details>
+    </section>
+
     <section class="nimo-section nimo-glass">
         <h2><i class="fa-solid fa-route nimo-quote"></i> Provider connection</h2>
         <p>By default your browser talks to AI providers <b>directly</b>, and NimoTavern never sees your prompts or keys. Some providers block requests from browsers (CORS). For those, you can turn on the NimoTavern relay.</p>

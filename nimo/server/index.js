@@ -12,11 +12,15 @@ import pg from 'pg';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import dns from 'node:dns/promises';
 import net from 'node:net';
 import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { createStats } from './stats.js';
+import { isPublicIp, publicOnlyLookup } from './netguard.js';
+import { createSealer } from './mp/seal.js';
+import { createEngine } from './mp/engine.js';
+import { createHub } from './mp/hub.js';
+import { createRoutes } from './mp/routes.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '../..'); // SillyTavern fork root
@@ -502,30 +506,6 @@ app.use('/api/nimo/blobs', blobs);
 // Streams bytes through; nothing is logged or stored.
 const HOP = new Set(['host', 'cookie', 'connection', 'content-length', 'transfer-encoding', 'origin', 'referer', 'x-nimo-target', 'x-nimo-relay', 'x-nimo-client', 'x-forwarded-for', 'x-forwarded-proto', 'x-real-ip', 'cf-connecting-ip', 'cf-ipcountry', 'cf-ray', 'cf-visitor', 'cdn-loop', 'accept-encoding', 'sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform', 'user-agent', 'accept-language', 'priority', 'true-client-ip']);
 
-// Everything that isn't the public internet: loopback, LAN, link-local, CGNAT, documentation/benchmark ranges,
-// multicast, and IPv6 forms that embed or translate IPv4 (mapped, NAT64, 6to4, Teredo).
-// Two separate lists: a BlockList also matches IPv4 addresses against IPv6 rules (as ::ffff:a.b.c.d), so the
-// "IPv4-mapped" rule below would otherwise block every IPv4 address.
-const NON_PUBLIC_V4 = new net.BlockList();
-const NON_PUBLIC_V6 = new net.BlockList();
-for (const [a, p] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 3]]) NON_PUBLIC_V4.addSubnet(a, p, 'ipv4');
-for (const [a, p] of [['::', 96], ['::ffff:0:0', 96], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 32], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]]) NON_PUBLIC_V6.addSubnet(a, p, 'ipv6');
-function isPublicIp(ip) {
-    if (net.isIPv4(ip)) return !NON_PUBLIC_V4.check(ip, 'ipv4');
-    if (net.isIPv6(ip)) return !NON_PUBLIC_V6.check(ip, 'ipv6');
-    return false;
-}
-
-// DNS lookup used for the actual connection. Checking the address here (instead of resolving once
-// beforehand) closes DNS rebinding: the socket can only ever connect to an address we've vetted.
-function publicOnlyLookup(hostname, opts, cb) {
-    dns.lookup(hostname, { all: true, verbatim: true }).then((addrs) => {
-        if (!addrs.length || addrs.some((a) => !isPublicIp(a.address))) return cb(Object.assign(new Error('private address'), { code: 'NIMO_PRIVATE' }));
-        if (opts && opts.all) return cb(null, addrs);
-        cb(null, addrs[0].address, addrs[0].family);
-    }, (e) => cb(e));
-}
-
 // Only headers a provider client actually needs are passed back; nothing that could change how the
 // browser treats our origin (CSP, CORS, cookies, redirects, caching...).
 const RELAY_RESP_HEADERS = /^(content-type|content-encoding|retry-after|x-request-id|request-id|x-ratelimit-[a-z0-9-]+|anthropic-ratelimit-[a-z0-9-]+|openai-[a-z0-9-]+)$/;
@@ -559,6 +539,14 @@ app.all('/api/nimo/relay', requireClientHeaderRelay, requireSession, limit('rela
     if (hasBody) req.pipe(up); else up.end();
 });
 function requireClientHeaderRelay(req, res, next) { if (!req.headers['x-nimo-relay']) return res.status(403).end(); next(); }
+
+// ---------------------------------------------------------------------------
+// Multiplayer sessions (mp/): run by the server with the host's multiplayer API key, sealed at rest.
+const mpEngine = createEngine({ pool, sealer: createSealer(CFG.secret) });
+const mpHub = createHub({ getSession, engine: mpEngine });
+mpEngine.setHub(mpHub);
+app.use('/api/nimo/mp', createRoutes({ engine: mpEngine, requireSession, requireClientHeader, limit, wrap }));
+setInterval(() => mpEngine.housekeeping().catch((e) => console.error('[nimotavern] mp housekeeping:', e?.message?.slice(0, 200))), 60_000).unref();
 
 // ---------------------------------------------------------------------------
 // Pages & static files
@@ -649,6 +637,9 @@ function buildDefaultsBundle() {
     // Default character avatar: SillyTavern's server reads it for cards without a picture (JSON/YAML/CHARX/BYAF
     // imports, "create character" without an image). Without it those imports fail with "invalid or corrupted".
     files.push({ path: 'public/img/ai4.png', vfs: '/public/img/ai4.png', url: '/img/ai4.png', size: fs.statSync(path.join(ROOT, 'public/img/ai4.png')).size });
+    // NimoTavern Multiplayer, served to SillyTavern as a global third-party extension (in memory, never per user).
+    const mpDir = path.join(NIMO_DIST, 'nimo/mp');
+    if (fs.existsSync(mpDir)) for (const f of fs.readdirSync(mpDir)) files.push({ path: 'nimo-multiplayer/' + f, vfs: '/public/scripts/extensions/third-party/nimo-multiplayer/' + f, text: fs.readFileSync(path.join(mpDir, f), 'utf8') });
     // Built-in extension manifests (SillyTavern discovers extensions by listing this folder).
     const extDir = path.join(ROOT, 'public/scripts/extensions');
     for (const name of fs.readdirSync(extDir)) {
@@ -685,4 +676,10 @@ app.use((err, _req, res, _next) => {
 setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at < now()').catch(() => { }), 3600_000).unref();
 
 const server = app.listen(CFG.port, CFG.host, () => console.log(`NimoTavern listening on ${CFG.host}:${CFG.port}`));
+server.on('upgrade', (req, socket, head) => {
+    if (new URL(req.url, 'http://x').pathname === '/api/nimo/mp/ws') mpHub.upgrade(req, socket, head);
+    else socket.destroy();
+});
+// Last line of defence: a stray rejection must never take the whole site down. Logs the message only.
+process.on('unhandledRejection', (e) => console.error('[nimotavern] unhandled rejection:', e?.message?.slice(0, 200)));
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, async () => { server.close(); try { await stats.flush(); } catch { /* */ } process.exit(0); });

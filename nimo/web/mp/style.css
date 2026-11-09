@@ -1,0 +1,98 @@
+/* NimoTavern Multiplayer: built on SillyTavern's theme variables so it follows every theme. */
+#nimo-mp-bar {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 10px;
+    background-color: var(--SmartThemeBlurTintColor);
+    backdrop-filter: blur(var(--SmartThemeBlurStrength));
+    -webkit-backdrop-filter: blur(var(--SmartThemeBlurStrength));
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    box-shadow: 0 2px 12px var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.92);
+    z-index: 2;
+}
+#nimo-mp-bar .nimo-mp-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#nimo-mp-bar .nimo-mp-head { flex-wrap: wrap; }
+#nimo-mp-bar .nimo-mp-logo { color: var(--SmartThemeQuoteColor); }
+#nimo-mp-bar .nimo-mp-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+#nimo-mp-bar .nimo-mp-round { color: var(--SmartThemeEmColor); white-space: nowrap; }
+#nimo-mp-bar .nimo-mp-actions { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+#nimo-mp-bar .nimo-mp-actions .menu_button { margin: 0; padding: 3px 9px; width: auto; gap: .4em; font-size: .95em; white-space: nowrap; }
+#nimo-mp-bar .nimo-mp-seats { overflow-x: auto; padding: 2px 0 4px; scrollbar-width: thin; }
+#nimo-mp-bar .nimo-mp-seat {
+    position: relative;
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 10px 3px 3px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 999px;
+    background: var(--black30a);
+    white-space: nowrap;
+    opacity: .75;
+    transition: opacity .2s, border-color .2s, box-shadow .2s;
+}
+#nimo-mp-bar .nimo-mp-seat img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+#nimo-mp-bar .nimo-mp-seat.online img { box-shadow: 0 0 0 2px var(--okGreen70a, #3c8c3c); }
+#nimo-mp-bar .nimo-mp-seat.turn { opacity: 1; border-color: var(--SmartThemeQuoteColor); box-shadow: 0 0 8px color-mix(in srgb, var(--SmartThemeQuoteColor) 55%, transparent); }
+#nimo-mp-bar .nimo-mp-seat.me span { text-decoration: underline; text-underline-offset: 3px; }
+#nimo-mp-bar .nimo-mp-seat.done, #nimo-mp-bar .nimo-mp-seat.pending { opacity: .6; }
+#nimo-mp-bar .nimo-mp-seat.ai { border-style: dashed; }
+#nimo-mp-bar .nimo-mp-crown { color: #e6c35c; font-size: .8em; }
+#nimo-mp-bar .nimo-mp-done { color: var(--SmartThemeEmColor); font-size: .8em; }
+#nimo-mp-bar .nimo-mp-writing { color: var(--SmartThemeQuoteColor); animation: nimo-mp-pulse 1.2s ease-in-out infinite; }
+#nimo-mp-bar .nimo-mp-status { color: var(--SmartThemeEmColor); min-height: 1.3em; }
+#nimo-mp-bar .nimo-mp-yourturn { color: var(--SmartThemeQuoteColor); }
+@keyframes nimo-mp-pulse { 50% { opacity: .35; } }
+
+/* In a multiplayer chat, the AI only answers on its turn: hide SillyTavern's local generation controls. */
+body.nimo-mp #mes_continue, body.nimo-mp #mes_impersonate, body.nimo-mp #option_regenerate, body.nimo-mp #option_impersonate,
+body.nimo-mp #option_continue, body.nimo-mp #option_delete_mes, body.nimo-mp #option_convert_to_group,
+body.nimo-mp #chat .swipe_left, body.nimo-mp #chat .swipe_right, body.nimo-mp #chat .swipes-counter,
+body.nimo-mp #chat .mes_buttons .mes_edit_copy, body.nimo-mp #chat .mes_buttons .mes_hide, body.nimo-mp #chat .mes_buttons .mes_unhide,
+body.nimo-mp #chat .mes_edit_up, body.nimo-mp #chat .mes_edit_down, body.nimo-mp #chat .mes_edit_copy,
+body.nimo-mp #chat .mes_buttons .mes_create_bookmark, body.nimo-mp #chat .mes_buttons .mes_create_branch { display: none !important; }
+body.nimo-mp #chat .mes.nimo-mp-locked .mes_edit { display: none !important; }
+body.nimo-mp #chat .mes.nimo-mp-ooc .mes_text { opacity: .7; font-style: italic; font-size: .92em; }
+body.nimo-mp #chat .mes.nimo-mp-ooc .mes_text::before { content: 'OOC'; font-style: normal; font-size: .7em; letter-spacing: .05em; margin-right: .5em; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeEmColor); }
+body.nimo-mp-gone #send_form { opacity: .55; pointer-events: none; }
+
+/* Popups */
+.nimo-mp-form { text-align: left; display: flex; flex-direction: column; gap: 8px; }
+.nimo-mp-form h3 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; }
+.nimo-mp-form h3 i { color: var(--SmartThemeQuoteColor); }
+.nimo-mp-form h4 { margin: 10px 0 2px; border-bottom: 1px solid var(--SmartThemeBorderColor); padding-bottom: 3px; }
+.nimo-mp-form h4 small, .nimo-mp-form label small { color: var(--SmartThemeEmColor); font-weight: normal; }
+.nimo-mp-form label:not(.checkbox_label) { display: flex; flex-direction: column; gap: 3px; font-size: .92em; }
+.nimo-mp-form .text_pole { margin: 0; width: 100%; }
+.nimo-mp-form textarea.text_pole { resize: vertical; }
+.nimo-mp-form p { margin: 2px 0; line-height: 1.45; }
+.nimo-mp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.nimo-mp-form .menu_button { width: auto; margin: 0; }
+.nimo-mp-notice { border: 1px solid #e3a33a; border-radius: 8px; padding: 8px 12px; background: color-mix(in srgb, #e3a33a 10%, transparent); font-size: .9em; }
+.nimo-mp-notice b:first-child { color: #e3a33a; }
+.nimo-mp-notice ul { margin: 4px 0; padding-left: 20px; }
+.nimo-mp-notice li { margin: 3px 0; }
+.nimo-mp-agree { font-weight: bold; }
+.nimo-mp-modehelp { color: var(--SmartThemeEmColor); }
+.nimo-mp-test { color: var(--SmartThemeEmColor); }
+.nimo-mp-ok { color: var(--okGreen, #5cb85c); }
+.nimo-mp-lore { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.nimo-mp-players { display: flex; flex-direction: column; gap: 4px; }
+.nimo-mp-player { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 6px; background: var(--black30a); }
+.nimo-mp-player .menu_button { display: inline-flex; padding: 4px 7px; margin-left: 4px; }
+.nimo-mp-personas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto; }
+.nimo-mp-persona { display: flex; gap: 8px; align-items: center; padding: 6px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 8px; cursor: pointer; background: var(--black30a); }
+.nimo-mp-persona:has(input:checked) { border-color: var(--SmartThemeQuoteColor); box-shadow: 0 0 6px color-mix(in srgb, var(--SmartThemeQuoteColor) 45%, transparent); }
+.nimo-mp-persona input { display: none; }
+.nimo-mp-persona img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.nimo-mp-persona span { display: flex; flex-direction: column; min-width: 0; }
+.nimo-mp-persona small { color: var(--SmartThemeEmColor); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+@media (max-width: 1000px) {
+    #nimo-mp-bar { padding: 4px 6px; }
+    #nimo-mp-bar .nimo-mp-title { max-width: 55%; }
+    #nimo-mp-bar .nimo-mp-actions .menu_button span { display: none; }
+    #nimo-mp-bar .nimo-mp-seat span { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+}

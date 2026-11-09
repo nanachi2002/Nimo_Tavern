@@ -114,3 +114,20 @@ body.nimo * { box-sizing: border-box; }
 .nimo-credit a.cr-link { padding: 1px 9px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 999px; text-decoration: none; white-space: nowrap; background: var(--black30a); }
 .nimo-credit a.cr-link:hover { background: var(--black50a); }
 .nimo-creditbox { border-color: var(--SmartThemeQuoteColor); }
+
+/* account mailbox */
+.nimo-mail-count { font-size: .6em; padding: 1px 8px; border-radius: 999px; background: var(--SmartThemeQuoteColor); color: #111; vertical-align: middle; }
+.nimo-mail-card { display: flex; gap: 12px; padding: 12px; margin: 8px 0; border: 1px solid var(--SmartThemeQuoteColor); border-radius: 10px; background: var(--black30a); }
+.nimo-mail-icon { font-size: 1.8em; color: var(--SmartThemeQuoteColor); width: 1.3em; text-align: center; padding-top: 2px; }
+.nimo-mail-body { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.nimo-mail-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.nimo-mail-actions .menu_button { width: auto; padding: 5px 12px; margin: 0; }
+.nimo-mail-privacy { border: 1px solid #e3a33a; border-radius: 8px; padding: 8px 12px; background: color-mix(in srgb, #e3a33a 10%, transparent); font-size: .9em; line-height: 1.5; }
+.nimo-mail-privacy b { color: #e3a33a; display: block; margin-bottom: 2px; }
+.nimo-mail-notices { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.nimo-mail-notice { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border-radius: 8px; background: var(--black30a); }
+.nimo-mail-notice i { color: var(--SmartThemeQuoteColor); width: 1.2em; text-align: center; }
+.nimo-mail-notice span { flex: 1; }
+.nimo-mail-notice.new { border-left: 3px solid var(--SmartThemeQuoteColor); }
+.nimo-mail-blocked { display: inline-block; margin-right: 10px; }
+.nimo-new { font-size: .62em; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--SmartThemeQuoteColor); color: #111; vertical-align: middle; text-transform: uppercase; letter-spacing: .04em; }

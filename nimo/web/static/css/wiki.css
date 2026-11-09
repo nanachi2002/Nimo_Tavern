@@ -254,3 +254,10 @@ details.wk-faq > div { padding: 0 16px 12px; }
     .demo-dots { margin-left: auto; }
     .demo-cap { order: 5; flex-basis: 100%; min-height: 2.6em; }
 }
+/* multiplayer demo: players bar */
+.mk-seats { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 10px; border-bottom: 1px solid var(--SmartThemeBorderColor); background: var(--SmartThemeBlurTintColor); }
+.mk-seat { padding: 2px 10px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 999px; background: var(--black30a); font-size: 12px; opacity: .75; transition: all .3s; }
+.mk-seat.ai { border-style: dashed; }
+.mk-seat.turn { opacity: 1; border-color: var(--SmartThemeQuoteColor); box-shadow: 0 0 8px color-mix(in srgb, var(--SmartThemeQuoteColor) 55%, transparent); }
+.mk-seat.done { opacity: .55; }
+.mk-seat.done::after { content: ' ✓'; }

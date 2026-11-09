@@ -120,7 +120,14 @@ app.get('/User Avatars/*', staticFrom(r => r.user.directories.avatars));
 app.get('/assets/*', staticFrom(r => r.user.directories.assets));
 app.get('/user/images/*', staticFrom(r => r.user.directories.userImages));
 app.get('/user/files/*', staticFrom(r => r.user.directories.files));
-app.get('/scripts/extensions/third-party/*', staticFrom(r => r.user.directories.extensions));
+// The user's own extensions first, then global ones (NimoTavern Multiplayer is loaded there at boot).
+const userExt = staticFrom(r => r.user.directories.extensions);
+const globalExt = staticFrom(() => '/public/scripts/extensions/third-party');
+app.get('/scripts/extensions/third-party/*', (req, res, next) => {
+    const rel = decodeURIComponent(req.params[0] || '');
+    const own = path.normalize(path.join(req.user.directories.extensions, rel));
+    return (vfs.existsSync(own) ? userExt : globalExt)(req, res, next);
+});
 
 app.get('/csrf-token', (_req, res) => res.json({ token: 'disabled' }));
 app.get('/version', (_req, res) => res.json({ agent: 'NimoTavern', pkgVersion: __ST_VERSION__, gitRevision: 'nimotavern', gitBranch: 'nimotavern', isLatest: true }));

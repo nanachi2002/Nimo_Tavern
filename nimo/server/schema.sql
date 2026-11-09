@@ -81,3 +81,68 @@ CREATE TABLE IF NOT EXISTS legacy_accounts (
     claimed_user  BIGINT REFERENCES users(id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Multiplayer sessions. The server runs the AI for these, so it can read them while generating; everything with
+-- content is sealed at rest (see mp/seal.js): config, personas, avatars, messages. Plain columns hold only ids,
+-- counters and the turn state (member ids, round number). Ending a session deletes every row; so does deleting
+-- the host's account. Inactive sessions are deleted after 90 days.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_invites TEXT NOT NULL DEFAULT 'anyone';
+CREATE TABLE IF NOT EXISTS mp_sessions (
+    id           UUID PRIMARY KEY,
+    host_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    max_players  INT NOT NULL DEFAULT 6,
+    rev          BIGINT NOT NULL DEFAULT 0,
+    wrapped_key  BYTEA NOT NULL,
+    config       BYTEA NOT NULL,   -- sealed: character, world, lorebook, prompts, AI provider + key, sampling
+    info         BYTEA NOT NULL,   -- sealed: what members see (title, character name + avatar)
+    state        JSONB NOT NULL    -- turn state: member ids and counters only
+);
+CREATE INDEX IF NOT EXISTS mp_sessions_host ON mp_sessions(host_id);
+CREATE TABLE IF NOT EXISTS mp_members (
+    session_id   UUID NOT NULL REFERENCES mp_sessions(id) ON DELETE CASCADE,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mid          TEXT NOT NULL,     -- random member id shown to clients (never the account id)
+    role         TEXT NOT NULL,     -- host | player
+    persona      BYTEA,             -- sealed {name, description}; NULL until the player picks one
+    avatar       BYTEA,             -- sealed image
+    joined_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (session_id, user_id),
+    UNIQUE (session_id, mid)
+);
+CREATE INDEX IF NOT EXISTS mp_members_user ON mp_members(user_id);
+CREATE TABLE IF NOT EXISTS mp_messages (
+    session_id   UUID NOT NULL REFERENCES mp_sessions(id) ON DELETE CASCADE,
+    id           BIGINT NOT NULL,   -- position in the chat
+    rev          BIGINT NOT NULL,   -- session revision of the last change (clients sync by rev)
+    data         BYTEA,             -- sealed message; NULL = deleted
+    PRIMARY KEY (session_id, id)
+);
+CREATE INDEX IF NOT EXISTS mp_messages_rev ON mp_messages(session_id, rev);
+ALTER TABLE mp_messages ALTER COLUMN data SET STORAGE EXTERNAL;
+CREATE TABLE IF NOT EXISTS mp_invites (
+    id           BIGSERIAL PRIMARY KEY,
+    session_id   UUID NOT NULL REFERENCES mp_sessions(id) ON DELETE CASCADE,
+    from_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_id        BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (session_id, to_id)
+);
+CREATE INDEX IF NOT EXISTS mp_invites_to ON mp_invites(to_id);
+CREATE TABLE IF NOT EXISTS mp_notices (
+    id           BIGSERIAL PRIMARY KEY,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_id   UUID REFERENCES mp_sessions(id) ON DELETE SET NULL,
+    kind         TEXT NOT NULL,     -- turn | joined | declined | kicked | ended
+    who          TEXT,              -- username the notice is about
+    title        BYTEA,             -- sealed session title (kept for "ended" notices after the session is gone)
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    seen         BOOLEAN NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS mp_notices_user ON mp_notices(user_id);
+CREATE TABLE IF NOT EXISTS mp_blocks (
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, blocked_id)
+);

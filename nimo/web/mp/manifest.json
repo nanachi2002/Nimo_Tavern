@@ -1,0 +1,13 @@
+{
+    "display_name": "NimoTavern Multiplayer",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Nimo team",
+    "version": "1.0.0",
+    "homePage": "https://nimorp.lol/wiki/multiplayer",
+    "generate_interceptor": "nimoMultiplayerInterceptor",
+    "auto_update": false
+}
