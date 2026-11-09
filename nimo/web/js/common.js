@@ -58,7 +58,7 @@ export async function unlockWithDek(dek, username) {
     const { encKey, idKey } = await deriveWorkingKeys(dek);
     dek.fill(0);
     await saveKeys({ encKey, idKey, username, savedAt: Date.now() });
-    await swMessage({ type: 'nimo-unlock' }, ['nimo-ready', 'nimo-error']);
+    await swMessage({ type: 'nimo-unlock' }, ['nimo-ready', 'nimo-error'], 60 * 60_000); // imports of big accounts can take a while
 }
 
 export async function passwordProof(username, password) {

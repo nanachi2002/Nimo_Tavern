@@ -167,8 +167,12 @@ auth.post('/prelogin', limit('prelogin', 30, 60_000), jsonSmall, wrap(async (req
     const u = String(req.body?.username || '');
     if (!USERNAME_RE.test(u)) return res.status(400).json({ error: 'Invalid username' });
     const { rows } = await pool.query('SELECT salt_pw, kdf FROM users WHERE username_lc = $1', [u.toLowerCase()]);
+    if (rows[0]) return res.json({ salt: rows[0].salt_pw.toString('base64'), kdf: rows[0].kdf });
+    // Account imported from the old SillyTavern instance, not claimed yet.
+    const { rows: leg } = await pool.query('SELECT st_salt FROM legacy_accounts WHERE username_lc = $1 AND claimed_user IS NULL', [u.toLowerCase()]);
+    if (leg[0]) return res.json({ salt: fakeSalt(u.toLowerCase(), 'pw').toString('base64'), kdf: KDF, legacy: { salt: leg[0].st_salt } });
     // Unknown users get a stable fake salt so the endpoint doesn't reveal who has an account.
-    res.json(rows[0] ? { salt: rows[0].salt_pw.toString('base64'), kdf: rows[0].kdf } : { salt: fakeSalt(u.toLowerCase(), 'pw').toString('base64'), kdf: KDF });
+    res.json({ salt: fakeSalt(u.toLowerCase(), 'pw').toString('base64'), kdf: KDF });
 }));
 
 auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (req, res) => {
@@ -178,6 +182,8 @@ auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (re
     if (!validKdf(b.kdf) || !HEX64.test(b.authPw || '') || !HEX64.test(b.authRec || '') || !B64.test(b.wrappedPw || '') || !B64.test(b.wrappedRec || '')) return res.status(400).json({ error: 'Invalid registration data' });
     const saltPw = Buffer.from(String(b.saltPw || ''), 'base64'); const saltRec = Buffer.from(String(b.saltRec || ''), 'base64');
     if (saltPw.length !== 16 || saltRec.length !== 16) return res.status(400).json({ error: 'Invalid salt' });
+    const { rows: reserved } = await pool.query('SELECT 1 FROM legacy_accounts WHERE username_lc = $1', [b.username.toLowerCase()]);
+    if (reserved[0]) return res.status(409).json({ error: 'This username belongs to an imported SillyTavern account. Log in with its existing password instead.' });
     if (!await verifyTurnstile(b.turnstile)) return res.status(400).json({ error: 'Captcha failed, please retry.' });
     try {
         const { rows } = await pool.query(
@@ -219,7 +225,8 @@ auth.get('/me', wrap(async (req, res) => {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: 'Not logged in' });
     const { rows } = await pool.query('SELECT username, created_at, used_bytes, quota_bytes FROM users WHERE id = $1', [s.userId]);
-    res.json({ username: rows[0].username, created: rows[0].created_at, used: Number(rows[0].used_bytes), quota: Number(rows[0].quota_bytes) });
+    const { rows: leg } = await pool.query('SELECT size FROM legacy_accounts WHERE claimed_user = $1', [s.userId]);
+    res.json({ username: rows[0].username, created: rows[0].created_at, used: Number(rows[0].used_bytes), quota: Number(rows[0].quota_bytes), legacyPending: leg[0] ? Number(leg[0].size) : 0 });
 }));
 
 // Recovery: step 1 returns the recovery salt (fake for unknown users)
@@ -294,6 +301,57 @@ auth.post('/delete-account', limit('sensitive', 10, 3600_000), requireSession, j
     res.json({ ok: true });
 }));
 
+
+// ---------------------------------------------------------------------------
+// Migration from the old SillyTavern instance.
+// The browser proves it knows the old password by computing SillyTavern's scrypt hash itself
+// (the password is still never sent), creates a normal NimoTavern account, then downloads the
+// plaintext archive, encrypts it locally and uploads it. The archive is then deleted.
+const LEGACY_DIR = env('LEGACY_DIR', '/var/lib/nimotavern/legacy');
+
+auth.post('/legacy/claim', limit('login', 20, 15 * 60_000), jsonSmall, wrap(async (req, res) => {
+    const b = req.body || {};
+    const u = String(b.username || '');
+    if (!USERNAME_RE.test(u)) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!validKdf(b.kdf) || !HEX64.test(b.authPw || '') || !HEX64.test(b.authRec || '') || !B64.test(b.wrappedPw || '') || !B64.test(b.wrappedRec || '')) return res.status(400).json({ error: 'Invalid data' });
+    const saltPw = Buffer.from(String(b.saltPw || ''), 'base64'); const saltRec = Buffer.from(String(b.saltRec || ''), 'base64');
+    if (saltPw.length !== 16 || saltRec.length !== 16) return res.status(400).json({ error: 'Invalid salt' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rows: [leg] } = await client.query('SELECT * FROM legacy_accounts WHERE username_lc = $1 AND claimed_user IS NULL FOR UPDATE', [u.toLowerCase()]);
+        const given = Buffer.from(String(b.stHash || ''), 'base64');
+        const stored = leg ? Buffer.from(leg.st_hash, 'base64') : Buffer.alloc(64);
+        if (!leg || given.length !== stored.length || !crypto.timingSafeEqual(given, stored)) {
+            await client.query('ROLLBACK');
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        const { rows: [user] } = await client.query(
+            `INSERT INTO users (username, username_lc, kdf, salt_pw, auth_pw_hash, salt_rec, auth_rec_hash, wrapped_pw, wrapped_rec, quota_bytes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+            [leg.username, leg.username_lc, b.kdf, saltPw, await hashAuth(b.authPw, saltPw), saltRec, await hashAuth(b.authRec, saltRec), b.wrappedPw, b.wrappedRec, Math.max(CFG.quota, Number(leg.size) * 2)]);
+        await client.query('UPDATE legacy_accounts SET claimed_user = $2 WHERE username_lc = $1', [leg.username_lc, user.id]);
+        await client.query('COMMIT');
+        await createSession(res, user.id);
+        res.json({ ok: true, username: leg.username, legacySize: Number(leg.size) });
+    } catch (e) { await client.query('ROLLBACK').catch(() => { }); throw e; } finally { client.release(); }
+}));
+
+app.get('/api/nimo/legacy/archive', requireSession, wrap(async (req, res) => {
+    const { rows: [leg] } = await pool.query('SELECT archive FROM legacy_accounts WHERE claimed_user = $1', [req.session.userId]);
+    if (!leg) return res.status(404).json({ error: 'Nothing to import' });
+    const file = path.join(LEGACY_DIR, path.basename(leg.archive));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/zip');
+    res.sendFile(file, (err) => { if (err && !res.headersSent) res.status(404).end(); });
+}));
+
+app.post('/api/nimo/legacy/finish', requireClientHeader, requireSession, wrap(async (req, res) => {
+    const { rows: [leg] } = await pool.query('DELETE FROM legacy_accounts WHERE claimed_user = $1 RETURNING archive', [req.session.userId]);
+    if (leg) fs.rmSync(path.join(LEGACY_DIR, path.basename(leg.archive)), { force: true }); // plaintext copy gone for good
+    res.json({ ok: true });
+}));
+
 app.use('/api/nimo/auth', auth);
 
 // ---------------------------------------------------------------------------
@@ -304,11 +362,11 @@ blobs.use(requireClientHeader, requireSession, limit('blobs', 600, 60_000, (req)
 blobs.get('/changes', wrap(async (req, res) => {
     const since = Math.max(0, parseInt(String(req.query.since || '0'), 10) || 0);
     const [{ rows }, u] = await Promise.all([
-        pool.query('SELECT id, seq, data IS NULL AS deleted FROM blobs WHERE user_id = $1 AND seq > $2 ORDER BY seq', [req.session.userId, since]),
+        pool.query('SELECT id, seq, size, data IS NULL AS deleted FROM blobs WHERE user_id = $1 AND seq > $2 ORDER BY seq', [req.session.userId, since]),
         pool.query('SELECT seq, used_bytes, quota_bytes FROM users WHERE id = $1', [req.session.userId]),
     ]);
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ changes: rows.map(r => ({ id: r.id, seq: Number(r.seq), deleted: r.deleted })), cursor: Number(u.rows[0].seq), quota: { used: Number(u.rows[0].used_bytes), limit: Number(u.rows[0].quota_bytes) } });
+    res.json({ changes: rows.map(r => ({ id: r.id, seq: Number(r.seq), size: r.size, deleted: r.deleted })), cursor: Number(u.rows[0].seq), quota: { used: Number(u.rows[0].used_bytes), limit: Number(u.rows[0].quota_bytes) } });
 }));
 
 blobs.post('/fetch', express.json({ limit: '64kb' }), wrap(async (req, res) => {

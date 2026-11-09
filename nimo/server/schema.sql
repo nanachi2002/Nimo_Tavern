@@ -41,3 +41,17 @@ CREATE TABLE IF NOT EXISTS blobs (
 );
 CREATE INDEX IF NOT EXISTS blobs_user_seq ON blobs(user_id, seq);
 ALTER TABLE blobs ALTER COLUMN data SET STORAGE EXTERNAL; -- ciphertext doesn't compress, skip TOAST compression
+
+-- Accounts imported from an existing SillyTavern instance, waiting to be claimed on first login.
+-- The archive is plaintext SillyTavern data (which the operator already had); it is deleted as
+-- soon as the owner's browser has re-encrypted and uploaded it.
+CREATE TABLE IF NOT EXISTS legacy_accounts (
+    username_lc   TEXT PRIMARY KEY,
+    username      TEXT NOT NULL,
+    st_salt       TEXT NOT NULL,
+    st_hash       TEXT NOT NULL,
+    archive       TEXT NOT NULL,
+    size          BIGINT NOT NULL DEFAULT 0,
+    claimed_user  BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);

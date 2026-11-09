@@ -1,6 +1,7 @@
 // Login / register / recover pages.
 import { api, unlockWithDek, passwordProof, showError, strengthMeter, showPhrase, swSupported, ensureServiceWorker } from './common.js';
 import { KDF_DEFAULT, randomBytes, b64, unb64, derivePasswordKeys, deriveRecoveryKeys, newRecoveryPhrase, isValidPhrase, wrapDek, unwrapDek } from '../../shared/crypto.js';
+import { scrypt } from 'hash-wasm';
 
 const form = document.querySelector('form[data-page]');
 const page = form?.dataset.page;
@@ -47,24 +48,71 @@ function checkPasswords(fd) {
 }
 
 if (page === 'login') {
+    const panel = document.getElementById('phrase-panel');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         showError(err, '');
         const fd = new FormData(form);
         const username = String(fd.get('username')).trim();
+        const password = String(fd.get('password'));
+        const next = new URLSearchParams(location.search).get('next');
+        const target = next?.startsWith('/') ? next : '/';
         setBusy(true, 'Deriving your key…');
         try {
-            const { kek, authKey } = await passwordProof(username, String(fd.get('password')));
+            const pre = await api('/auth/prelogin', { username });
+            if (pre.legacy) return await claimLegacy(username, password, pre.legacy.salt, target);
+            const { kek, authKey } = await derivePasswordKeys(username, password, unb64(pre.salt), pre.kdf);
             const res = await api('/auth/login', { username, authKey });
             setBusy(true, 'Decrypting your tavern…');
             const dek = await unwrapDek(kek, res.wrappedPw);
-            await unlockWithDek(dek, res.username);
-            location.replace(new URLSearchParams(location.search).get('next')?.startsWith('/') ? new URLSearchParams(location.search).get('next') : '/');
+            await unlockWithProgress(dek, res.username);
+            location.replace(target);
         } catch (ex) {
             setBusy(false);
             showError(err, ex.status === 401 ? 'Wrong username or password.' : ex.message);
         }
     });
+
+    // First login of an account imported from the previous SillyTavern server.
+    async function claimLegacy(username, password, stSalt, target) {
+        setBusy(true, 'Checking your SillyTavern password…');
+        // Same hash SillyTavern uses (scrypt N=16384, r=8, p=1, 64 bytes), computed here so the password never leaves the browser.
+        const stHash = b64(await scrypt({ password: password.normalize(), salt: stSalt, costFactor: 16384, blockSize: 8, parallelism: 1, hashLength: 64, outputType: 'binary' }));
+        setBusy(true, 'Creating your encrypted account…');
+        const dek = randomBytes(32);
+        const pw = await newPasswordMaterial(username, password);
+        const rec = await newRecoveryMaterial(username);
+        const res = await api('/auth/legacy/claim', {
+            username, stHash, kdf: KDF_DEFAULT,
+            saltPw: b64(pw.saltPw), authPw: pw.authPw, wrappedPw: await wrapDek(pw.kek, dek),
+            saltRec: b64(rec.saltRec), authRec: rec.authRec, wrappedRec: await wrapDek(rec.kek, dek),
+        });
+        form.hidden = true;
+        panel.hidden = false;
+        showPhrase(panel, rec.phrase, res.username);
+        const status = panel.querySelector('#import-status');
+        const btn = panel.querySelector('#enter-tavern');
+        let imported = false;
+        const updateBtn = () => { btn.disabled = !(imported && panel.querySelector('#saved-phrase').checked); };
+        panel.querySelector('#saved-phrase').addEventListener('change', updateBtn);
+        btn.addEventListener('click', () => location.replace(target));
+        try {
+            await unlockWithProgress(dek, res.username, (t) => { status.textContent = t; });
+            imported = true;
+            status.innerHTML = '<i class="fa-solid fa-check"></i> Your SillyTavern data was imported and encrypted.';
+            updateBtn();
+        } catch (ex) {
+            status.textContent = 'Import interrupted (' + ex.message + '). Log in again to resume, nothing is lost.';
+        }
+    }
+}
+
+/** Unlock and forward the Service Worker's progress messages (used for big imports). */
+async function unlockWithProgress(dek, username, onProgress) {
+    const show = onProgress || ((t) => setBusy(true, t));
+    const listener = (e) => { if (e.data?.type === 'nimo-progress') show(e.data.text); };
+    navigator.serviceWorker.addEventListener('message', listener);
+    try { await unlockWithDek(dek, username); } finally { navigator.serviceWorker.removeEventListener('message', listener); }
 }
 
 if (page === 'register') {

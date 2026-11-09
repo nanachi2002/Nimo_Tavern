@@ -5,6 +5,7 @@ import { Store, closeCache } from './store.js';
 import { nimoState } from './state.js';
 import { loadKeys, wipeLocal } from '../shared/crypto.js';
 import { createReq, createRes } from './shims/express.js';
+import { Unzip, UnzipInflate } from 'fflate';
 
 const BUILD = __NIMO_BUILD__;
 const STATIC_CACHE = 'nimo-static-' + BUILD;
@@ -70,22 +71,27 @@ async function boot() {
     nimoState.username = keys.username;
     appModule = appModule || await import('./app.js');
     vfs.persistRoots = ['/data/default-user'];
-    await loadDefaults();
+    const T = [performance.now()]; const mark = (l) => { T.push(performance.now()); console.info(`[nimo boot] ${l}: ${Math.round(T[T.length - 1] - T[T.length - 2])}ms`); };
+    await loadDefaults(); mark('defaults');
     appModule.initServerFiles();
     store = new Store(keys);
     store.onAuthError = () => lock(false);
-    const cached = await store.loadFromCache();
-    try { await store.pull(); } catch (e) { if (!cached) throw e; console.warn('[nimo] offline, using local cache', e); }
+    store.onPull = (got, total) => progress(`Downloading your encrypted tavern… ${mb(got)} / ${mb(total)}`);
+    const cached = await store.loadFromCache(); mark(`cache (${cached} blobs)`);
+    try { const n = await store.pull(); mark(`pull (${n} changes)`); } catch (e) { if (!cached) throw e; console.warn('[nimo] offline, using local cache', e); }
+    let imported = false;
+    const me = await fetch('/api/nimo/auth/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    if (me.legacyPending) imported = await importLegacy(me.legacyPending);
     appModule.ensureUserDirectories();
-    if (!vfs.existsSync('/data/default-user/settings.json')) {
+    if (!imported && !vfs.existsSync('/data/default-user/settings.json')) {
         await withRefRetry(() => appModule.seedContent());
     }
     loadNimoSettings();
     // Warm up shared default files needed by the first screen (character cards, avatars).
     const warm = [];
     for (const [p, e] of vfs.files) if (!e.data && e.ref && /^\/data\/default-user\/(characters|User Avatars)\//.test(p)) warm.push(p);
-    await vfs.resolveRefs(warm).catch(() => { });
-    await store.flush();
+    await vfs.resolveRefs(warm).catch(() => { }); mark('warm');
+    await store.flush(); mark(`flush`);
     nimoState.ready = true;
     vfs.listeners.add(scheduleFlush);
     startPeriodicSync();
@@ -115,6 +121,70 @@ async function lock(wipe) {
 }
 
 self.addEventListener('nimo-logout', () => { lock(true); });
+
+// ---------------------------------------------------------------------------
+// Import of an account migrated from the previous SillyTavern server.
+
+async function progress(text) {
+    for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) c.postMessage({ type: 'nimo-progress', text });
+}
+const mb = (n) => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' MB';
+
+async function importLegacy(expectedSize) {
+    const r = await fetch('/api/nimo/legacy/archive', { credentials: 'same-origin' });
+    if (r.status === 404) return false;
+    if (!r.ok) throw new Error('Could not download your SillyTavern data (' + r.status + ')');
+    const total = Number(r.headers.get('content-length')) || expectedSize;
+    const root = '/data/default-user/';
+    const td = new TextDecoder();
+    let manifest = null, files = 0, received = 0, lastReport = 0;
+    const unzip = new Unzip((file) => {
+        if (file.name.endsWith('/')) { vfs.mkdirSync(root + file.name, { recursive: true }); return; }
+        const chunks = [];
+        file.ondata = (err, data, final) => {
+            if (err) throw err;
+            chunks.push(data);
+            if (!final) return;
+            let len = 0; for (const c of chunks) len += c.length;
+            const out = new Uint8Array(len); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; }
+            if (file.name === 'nimo-manifest.json') { manifest = JSON.parse(td.decode(out)); return; }
+            const p = root + file.name;
+            vfs.mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true });
+            vfs.writeFileSync(p, out);
+            files++;
+        };
+        file.start();
+    });
+    unzip.register(UnzipInflate);
+    const reader = r.body.getReader();
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.length;
+        unzip.push(value);
+        if (Date.now() - lastReport > 400) { lastReport = Date.now(); progress(`Downloading your SillyTavern data… ${mb(received)} / ${mb(total)}`); }
+    }
+    unzip.push(new Uint8Array(0), true);
+    // Files identical to SillyTavern's default content are shared references, not copies.
+    for (const ref of manifest?.refs || []) {
+        vfs.loadRef(root + ref.path, '/nimo-defaults/' + ref.default, ref.size, Date.now());
+        vfs.markDirty(vfs.norm(root + ref.path));
+    }
+    // Encrypt and upload everything before deleting the plaintext copy on the server.
+    const toUpload = vfs.dirty.size;
+    store.uploadedBytes = 0;
+    store.onUpload = (n) => progress(`Encrypting and uploading… ${mb(n)} / ~${mb(total)}`);
+    progress(`Encrypting and uploading ${toUpload} files…`);
+    for (let attempt = 0; vfs.dirty.size && attempt < 5; attempt++) {
+        await store.flush();
+        if (store.lastError?.quota) throw store.lastError;
+    }
+    store.onUpload = null;
+    if (vfs.dirty.size) throw new Error('Upload incomplete, log in again to resume');
+    await fetch('/api/nimo/legacy/finish', { method: 'POST', credentials: 'same-origin', headers: { 'X-Nimo-Client': 'sw' } });
+    progress(`Imported ${files + (manifest?.refs?.length || 0)} files.`);
+    return true;
+}
 
 let flushTimer = null;
 function scheduleFlush() {

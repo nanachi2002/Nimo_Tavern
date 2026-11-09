@@ -12,4 +12,19 @@
         <div class="links"><a href="/recover">Forgot password? Use your recovery phrase</a><a href="/register">No account yet?</a></div>
         <p class="hint"><i class="fa-solid fa-lock"></i> Your password is processed only in this browser. NimoTavern receives a one-way login proof, never the password itself.</p>
     </form>
+
+    <div id="phrase-panel" class="panel nimo-glass" hidden>
+        <h2><i class="fa-solid fa-truck-ramp-box nimo-quote"></i> Welcome to NimoTavern!</h2>
+        <p class="hint">Your account was moved from the old SillyTavern server. Your data is now being <b>encrypted in this browser</b> and uploaded, and the old unencrypted copy is deleted from the server once that's done. Keep this tab open.</p>
+        <div class="nimo-ok" id="import-status"><i class="fa-solid fa-spinner fa-spin"></i> Starting…</div>
+        <h3 style="margin:8px 0 0">Your recovery phrase</h3>
+        <p class="hint">Your password stays the same. These 12 words are the <b>only</b> way back in if you ever forget it, because nobody, not even the admin, can reset it. Save them now; you won't see them again.</p>
+        <div class="nimo-phrase" id="phrase"></div>
+        <div class="flex-container" style="gap:6px">
+            <button class="menu_button" type="button" id="copy-phrase" style="flex:1"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button class="menu_button" type="button" id="download-phrase" style="flex:1"><i class="fa-solid fa-download"></i> Save as file</button>
+        </div>
+        <label class="nimo-check"><input type="checkbox" id="saved-phrase"> <span>I've saved my recovery phrase somewhere safe.</span></label>
+        <button class="menu_button primary" type="button" id="enter-tavern" disabled><i class="fa-solid fa-door-open"></i> Enter my tavern</button>
+    </div>
 </main>

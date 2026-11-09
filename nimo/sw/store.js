@@ -27,7 +27,7 @@ function tx(store, mode, fn) {
     return openCache().then(d => new Promise((res, rej) => {
         const t = d.transaction(store, mode);
         const out = fn(t.objectStore(store));
-        t.oncomplete = () => res(out?.result ?? out);
+        t.oncomplete = () => res(out instanceof IDBRequest ? out.result : out);
         t.onerror = () => rej(t.error);
     }));
 }
@@ -96,7 +96,8 @@ export class Store {
 
     /** Decrypt everything from the local cache into the VFS. */
     async loadFromCache() {
-        this.cursor = (await metaGet('cursor')) || 0;
+        const c = await metaGet('cursor');
+        this.cursor = Number.isFinite(c) ? c : 0;
         const all = await cacheGetAll();
         const results = await Promise.allSettled(all.map(([id, v]) => this.applyBlob(id, v.data)));
         const bad = results.filter(r => r.status === 'rejected').length;
@@ -125,8 +126,15 @@ export class Store {
                 await cacheDel(c.id);
             } else toFetch.push(c);
         }
-        for (let i = 0; i < toFetch.length; i += 100) {
-            const batch = toFetch.slice(i, i + 100);
+        const totalBytes = toFetch.reduce((n, c) => n + (c.size || 0), 0);
+        let gotBytes = 0;
+        // Batches of ~4 MB (max 100 blobs), 4 downloads in flight.
+        const batches = [];
+        for (let i = 0, cur = [], sz = 0; i < toFetch.length; i++) {
+            cur.push(toFetch[i]); sz += toFetch[i].size || 0;
+            if (cur.length >= 100 || sz >= 4 * 1048576 || i === toFetch.length - 1) { batches.push(cur); cur = []; sz = 0; }
+        }
+        const fetchBatch = async (batch) => {
             const br = await this.api('/blobs/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: batch.map(b => b.id) }) });
             if (!br.ok) throw new Error('Blob fetch failed: ' + br.status);
             const buf = new Uint8Array(await br.arrayBuffer());
@@ -142,7 +150,13 @@ export class Store {
                 if (p && vfs.dirty.has(p)) continue; // local unsynced edit wins
                 try { await this.applyBlob(id, data); await cachePut(id, { seq, data }); } catch (e) { console.warn('[nimo] bad blob', id, e); }
             }
-        }
+            gotBytes += batch.reduce((n, c) => n + (c.size || 0), 0);
+            if (totalBytes > 5 * 1048576) this.onPull?.(gotBytes, totalBytes);
+        };
+        let next = 0;
+        await Promise.all(Array.from({ length: Math.min(4, batches.length) }, async () => {
+            while (next < batches.length) await fetchBatch(batches[next++]);
+        }));
         this.cursor = Math.max(this.cursor, cursor);
         await metaPut('cursor', this.cursor);
         return changes.length;
@@ -163,48 +177,56 @@ export class Store {
     async _flushInner() {
         const paths = [...vfs.dirty];
         vfs.dirty.clear();
-        const puts = [], dels = [];
-        for (const p of paths) {
-            const id = await this.id(p);
-            const e = vfs.files.get(p);
-            if (e) {
-                const sealed = await encryptBlob(this.encKey, id, packFile(p, e));
-                puts.push({ id, p, sealed });
-            } else dels.push({ id, p });
-        }
+        const dels = [];
+        const done = new Set();
+        const BATCH = 8 * 1024 * 1024;
+        let batch = [], size = 0;
         try {
-            // Upload in framed batches: [u16 idLen][id][u32 len][data]...
-            for (let i = 0; i < puts.length;) {
-                let size = 0; const batch = [];
-                while (i < puts.length && (batch.length === 0 || size + puts[i].sealed.length < 8 * 1024 * 1024)) { size += puts[i].sealed.length; batch.push(puts[i++]); }
-                const body = new Uint8Array(batch.reduce((n, b) => n + 2 + b.id.length + 4 + b.sealed.length, 0));
-                const dv = new DataView(body.buffer); let off = 0;
-                for (const b of batch) {
-                    dv.setUint16(off, b.id.length); off += 2; body.set(te.encode(b.id), off); off += b.id.length;
-                    dv.setUint32(off, b.sealed.length); off += 4; body.set(b.sealed, off); off += b.sealed.length;
-                }
-                const r = await this.api('/blobs/put', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body });
-                if (r.status === 413) {
-                    const j = await r.json().catch(() => ({}));
-                    throw Object.assign(new Error(j.error || 'Storage quota exceeded'), { quota: true });
-                }
-                if (!r.ok) throw new Error('Upload failed: ' + r.status);
-                const { seqs, cursor, prev } = await r.json();
-                for (const b of batch) { this.pathById.set(b.id, b.p); await cachePut(b.id, { seq: seqs[b.id], data: b.sealed }); }
-                // Only advance the cursor if nobody else wrote in between (otherwise the next pull catches up).
-                if (prev === this.cursor) { this.cursor = cursor; await metaPut('cursor', this.cursor); }
+            // Encrypt and upload batch by batch, so memory stays bounded for large imports.
+            for (const p of paths) {
+                const id = await this.id(p);
+                const e = vfs.files.get(p);
+                if (!e) { dels.push({ id, p }); continue; }
+                const sealed = await encryptBlob(this.encKey, id, packFile(p, e));
+                batch.push({ id, p, sealed }); size += sealed.length;
+                if (size >= BATCH) { await this._upload(batch); batch.forEach(x => done.add(x.p)); batch = []; size = 0; }
             }
+            if (batch.length) { await this._upload(batch); batch.forEach(x => done.add(x.p)); }
             if (dels.length) {
                 const r = await this.api('/blobs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: dels.map(d => d.id) }) });
                 if (!r.ok) throw new Error('Delete failed: ' + r.status);
                 const { cursor, prev } = await r.json();
-                for (const d of dels) { this.pathById.delete(d.id); await cacheDel(d.id); }
+                for (const d of dels) { this.pathById.delete(d.id); await cacheDel(d.id); done.add(d.p); }
                 if (prev === this.cursor) { this.cursor = cursor; await metaPut('cursor', this.cursor); }
             }
         } catch (e) {
-            // Put the paths back so the next flush retries them.
-            for (const p of paths) vfs.dirty.add(p);
+            // Put back what wasn't uploaded so the next flush retries it.
+            for (const p of paths) if (!done.has(p)) vfs.dirty.add(p);
+            this.lastError = e;
             throw e;
         }
+        this.lastError = null;
+    }
+
+    /** Upload one framed batch: [u16 idLen][id][u32 len][data]... */
+    async _upload(batch) {
+        const body = new Uint8Array(batch.reduce((n, b) => n + 2 + b.id.length + 4 + b.sealed.length, 0));
+        const dv = new DataView(body.buffer); let off = 0;
+        for (const b of batch) {
+            dv.setUint16(off, b.id.length); off += 2; body.set(te.encode(b.id), off); off += b.id.length;
+            dv.setUint32(off, b.sealed.length); off += 4; body.set(b.sealed, off); off += b.sealed.length;
+        }
+        const r = await this.api('/blobs/put', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body });
+        if (r.status === 413) {
+            const j = await r.json().catch(() => ({}));
+            throw Object.assign(new Error(j.error || 'Storage quota exceeded'), { quota: true });
+        }
+        if (!r.ok) throw new Error('Upload failed: ' + r.status);
+        const { seqs, cursor, prev } = await r.json();
+        for (const b of batch) { this.pathById.set(b.id, b.p); await cachePut(b.id, { seq: seqs[b.id], data: b.sealed }); }
+        this.uploadedBytes = (this.uploadedBytes || 0) + body.length;
+        this.onUpload?.(this.uploadedBytes);
+        // Only advance the cursor if nobody else wrote in between (otherwise the next pull catches up).
+        if (prev === this.cursor) { this.cursor = cursor; await metaPut('cursor', this.cursor); }
     }
 }
