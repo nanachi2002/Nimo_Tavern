@@ -116,7 +116,7 @@
         const ver = document.getElementById('version_display');
         if (ver) {
             const note = document.createElement('small');
-            note.innerHTML = ' · <a href="https://sillytavern.app" target="_blank" rel="noopener" style="color:inherit"><i class="fa-solid fa-heart"></i> Fork of SillyTavern</a> · <a href="/wiki" target="_blank" style="color:inherit"><i class="fa-solid fa-book-open"></i> Wiki</a> · <a href="/privacy" target="_blank" style="color:inherit"><i class="fa-solid fa-lock"></i> NimoTavern, end-to-end encrypted</a>';
+            note.innerHTML = ' · <a href="https://sillytavern.app" target="_blank" rel="noopener" style="color:inherit"><i class="fa-solid fa-heart"></i> Built on SillyTavern</a> · <a href="/wiki" target="_blank" style="color:inherit"><i class="fa-solid fa-book-open"></i> Wiki</a> · <a href="/privacy" target="_blank" style="color:inherit"><i class="fa-solid fa-lock"></i> NimoTavern, end-to-end encrypted</a>';
             ver.after(note);
         }
     });
