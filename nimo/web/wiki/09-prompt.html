@@ -1,0 +1,59 @@
+<!--TITLE Prompt, context & formatting -->
+<!--ICON fa-solid fa-font -->
+<!--GROUP Shape the AI -->
+<!--DESC What the AI really receives, why long chats get forgotten, and what Advanced Formatting, system prompts and instruct templates do. -->
+<h2>What the AI actually receives</h2>
+<p>The AI never sees "your tavern". Every time you send a message, SillyTavern assembles one big block of text (the <b>prompt</b>) and sends it. A simplified picture:</p>
+<pre><code>[ System prompt ]            "You are roleplaying as {{char}}..."
+[ Character card ]           description, personality, scenario
+[ Your persona ]             who you are
+[ World Info ]               only the lore entries triggered right now
+[ Example messages ]         how the character talks
+[ Chat history ]             as many recent messages as fit
+[ Post-history / Author's note ]
+→ then the AI writes the next message</code></pre>
+<p>Because the AI has no memory between requests, <b>the whole thing is re-sent every time</b>. That is why long chats cost more and why old messages eventually vanish.</p>
+
+<h2>What fits in the context window?</h2>
+<p>The <b>context size</b> is the maximum number of tokens in that prompt <i>plus</i> the reply. Fixed parts (system prompt, card, lore…) are always included; the chat history gets whatever space remains, and the <b>oldest messages are dropped first</b>. Try it:</p>
+
+<!--nosearch-->
+<div class="widget" data-widget="context"></div>
+<!--/nosearch-->
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">How to give the AI a longer memory</strong>
+<ul>
+<li>Raise context size (if your model and budget allow). Bigger isn't always better: models get less accurate and more expensive with huge prompts.</li>
+<li>Trim the character card and persona.</li>
+<li>Use the <b>Summarize</b> extension to compress old events into a short recap.</li>
+<li>Put lasting facts in a <a href="/wiki/world-info">lorebook</a> so they're only included when needed.</li>
+</ul></div></div>
+
+<h2>Advanced Formatting</h2>
+<p>The <i class="fa-solid fa-font"></i> panel controls <b>how</b> the prompt text is laid out. It matters most for Text Completion (local models), where SillyTavern builds the raw text itself. Chat Completion providers build the final format themselves, so there you mostly use the <b>Prompt Manager</b>.</p>
+
+<h3>Context template (story string)</h3>
+<p>Defines the order and wrapping of the "fixed" parts. It uses placeholders:</p>
+<pre><code>{{#if system}}{{system}}
+{{/if}}{{#if description}}{{description}}
+{{/if}}{{#if personality}}{{char}}'s personality: {{personality}}
+{{/if}}{{#if scenario}}Scenario: {{scenario}}
+{{/if}}{{#if persona}}{{persona}}
+{{/if}}</code></pre>
+<p>Most models work well with the default. Change it only if a model's documentation asks for a specific format.</p>
+
+<h3>Instruct template</h3>
+<p>Local models are trained on a particular chat format (ChatML, Llama-3, Mistral…): special tokens that mark who is speaking. If the instruct template doesn't match the model, replies get weird. Rule: <b>pick the template that matches your model</b> (it's usually named in the model's page) and turn <b>Instruct Mode</b> on.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Symptom</th><th>Probable cause</th></tr>
+<tr><td>Replies include odd tags like <code>&lt;|im_end|&gt;</code></td><td>Wrong or missing instruct template / stop sequence.</td></tr>
+<tr><td>The AI writes your lines for you</td><td>Add your name as a stop string, or enable "Always add character's name to prompt".</td></tr>
+<tr><td>Very short, bland replies</td><td>Instruct mode off for an instruct-tuned model, or response length too small.</td></tr>
+</table></div>
+
+<h3>System prompt</h3>
+<p>The first instruction block: tone, rules, formatting ("write in third person, 2–3 paragraphs, never speak for {{user}}"). SillyTavern ships several; you can edit or add your own. A character card may override it with its own system prompt (see <a href="/wiki/characters">Characters</a>).</p>
+
+<h2>Tokens, measured</h2>
+<p>SillyTavern counts tokens with a tokenizer matching your model where it can, and shows counts in the card editor, the Prompt Manager and under each message. Counts are estimates for some providers, so leave a little headroom.</p>
+<div class="callout secure"><i class="fa-solid fa-lock"></i><div><p>Tokenizing happens <b>in your browser</b> in NimoTavern: your text is never sent to the server to be counted.</p></div></div>

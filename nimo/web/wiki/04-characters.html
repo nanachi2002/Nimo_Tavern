@@ -1,0 +1,83 @@
+<!--TITLE Characters -->
+<!--ICON fa-solid fa-address-card -->
+<!--GROUP Connect & chat -->
+<!--DESC What a character card is, how to import or create one, and what every field in the editor does. -->
+<p>A <b>character card</b> is the AI's script: who it is, how it talks, what the scene is, and how the story starts. The model itself is the same for every character; the card is what makes Seraphina feel different from a pirate or a tutor.</p>
+
+<h2>Importing a character</h2>
+<p>Cards are shared as <b>PNG images</b> (the character data is hidden inside the picture) or <b>JSON</b> files. SillyTavern also reads newer formats like <code>.charx</code>.</p>
+<ol class="steps">
+    <li><b>Download a card</b> from a community site or a friend. A PNG that looks like a normal picture is fine, don't convert or recompress it.</li>
+    <li><b>Open Character Management</b> (right-most icon).</li>
+    <li><b>Click the import icon</b> <i class="fa-solid fa-file-import"></i> and choose the file, or drag the file onto the tavern window.</li>
+    <li><b>Done.</b> The card appears in your list. Click it to open a chat.</li>
+</ol>
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><p>You can import several files at once. Chats, lorebooks and presets have their own import buttons in their own panels.</p></div></div>
+<div class="callout secure"><i class="fa-solid fa-lock"></i><div><p>Imported cards are encrypted in your browser before they sync, like everything else. The server never sees the card or its picture.</p></div></div>
+
+<h2>Creating your own</h2>
+<p>Click <i class="fa-solid fa-plus"></i> in the character panel. You get an editor with the fields below. You don't need all of them: <b>name, description and first message</b> are enough to start.</p>
+
+<!--nosearch-->
+<div class="demo tall" data-title="Creating a character">
+<div class="demo-stage"><div class="mk">
+{{include:topbar}}
+<div class="mk-body">
+    <div class="mk-drawer right wide js-drawer">
+        <h5><i class="fa-solid fa-address-card"></i> Character Management <span class="menu_button green js-new" style="margin-left:auto"><i class="fa-solid fa-plus"></i> Create</span></h5>
+        <div class="mk-card"><div class="av">S</div><div><b>Seraphina</b><small>Forest guardian</small></div></div>
+        <div class="js-form" data-hide style="display:flex;flex-direction:column;gap:6px">
+            <label>Name <div class="text_pole js-name"></div></label>
+            <label>Description <div class="text_pole js-desc" style="min-height:48px;align-items:flex-start"></div></label>
+            <label>First message <div class="text_pole js-first" style="min-height:48px;align-items:flex-start"></div></label>
+            <div class="row"><div class="menu_button green js-save"><i class="fa-solid fa-floppy-disk"></i> Save</div></div>
+        </div>
+    </div>
+    <div class="mk-toast js-toast" data-hide><i class="fa-solid fa-circle-check"></i> Character created!</div>
+</div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"In the character panel, click Create.","at":".js-new","act":"click","show":[".js-form"]},
+ {"say":"Give it a name.","at":".js-name","act":"type","text":"Captain Mira"},
+ {"say":"Describe who they are: personality, looks, background, how they speak.","at":".js-desc","act":"type","text":"A sarcastic airship captain. Loyal to her crew, hates paperwork, talks in short punchy sentences."},
+ {"say":"Write the first message: it starts every new chat and sets the scene.","at":".js-first","act":"type","text":"*Mira kicks the cabin door open.* \"You the new deckhand? Good. Grab a mop.\""},
+ {"say":"Save. Your character is ready to chat with.","at":".js-save","act":"click","show":[".js-toast"],"wait":1800}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Every field, explained</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Field</th><th>What it does</th><th>Tip</th></tr>
+<tr><td><b>Name</b></td><td>Shown on messages and used as <code>{{char}}</code>.</td><td>Keep it short and unique.</td></tr>
+<tr><td><b>Description</b></td><td>The core of the card: personality, appearance, backstory, speech style. Sent with <b>every</b> request.</td><td>Be concrete. "Speaks in clipped sentences" beats "is blunt".</td></tr>
+<tr><td><b>First message</b></td><td>The greeting that begins each new chat. Also teaches the AI the writing style and length you want.</td><td>The AI imitates it: write the way you want replies to look.</td></tr>
+<tr><td><b>Alternate greetings</b></td><td>Extra openings. Use the arrows on the first message to swipe between them.</td><td>Great for different scenarios with one card.</td></tr>
+<tr><td><b>Scenario</b></td><td>The situation right now: place, time, relationship.</td><td>Optional if the first message already sets it.</td></tr>
+<tr><td><b>Personality</b></td><td>A short summary of traits (older cards use it heavily).</td><td>Often merged into Description today.</td></tr>
+<tr><td><b>Example messages</b></td><td>Sample dialogue showing exactly how the character talks. Separate examples with <code>&lt;START&gt;</code>.</td><td>Powerful but costs tokens. Use 2–3 short ones.</td></tr>
+<tr><td><b>Creator's notes</b></td><td>Notes for people, shown in the card list. <b>Not</b> sent to the AI.</td><td>Put usage tips and credits here.</td></tr>
+<tr><td><b>System prompt</b> (advanced)</td><td>Overrides the global system prompt for this character.</td><td>Leave empty unless you know why.</td></tr>
+<tr><td><b>Post-history instructions</b> (advanced)</td><td>Instructions placed <i>after</i> the chat, where the AI pays the most attention.</td><td>Good for style reminders: "Stay in character. Keep replies under 150 words."</td></tr>
+<tr><td><b>Tags</b></td><td>Labels to filter your library.</td><td>Use tags once you have more than ~20 cards.</td></tr>
+<tr><td><b>Embedded lorebook</b></td><td>A <a href="/wiki/world-info">World Info</a> book attached to the card.</td><td>For lore that only this character needs.</td></tr>
+</table></div>
+
+<h3>Macros you can use in any field</h3>
+<p>These placeholders are replaced when the prompt is built. They make cards reusable.</p>
+<pre><code>{{char}}   → the character's name
+{{user}}   → your persona's name
+{{random:red,green,blue}}   → one of the options
+{{time}}  {{date}}  {{weekday}}   → current time info</code></pre>
+<p>Example: <code>{{char}} squints at {{user}} and says nothing.</code> becomes <i>Captain Mira squints at Alex and says nothing.</i> More in <a href="/wiki/commands">Slash commands &amp; macros</a>.</p>
+
+<h2>Tokens: the hidden cost of a card</h2>
+<p>Description, personality, scenario and examples are sent with <b>every</b> message, so they permanently use part of the context window. The editor shows a token count. As a rule of thumb, aim for a few hundred to ~1,500 tokens. Anything longer leaves less room for chat memory (see the <a href="/wiki/prompt#what-fits-in-the-context-window">context visualizer</a>).</p>
+
+<h2>Managing your library</h2>
+<ul>
+    <li><b>Search &amp; sort</b> by name, date or recent chats. Use <b>tags</b> to filter.</li>
+    <li><b>Favorite</b> (star) characters to pin them to the top.</li>
+    <li><b>Duplicate</b> a card before big experiments.</li>
+    <li><b>Export</b> a card as PNG or JSON to share or back it up.</li>
+    <li><b>Delete</b> removes the card. Its chats can be kept or deleted when you confirm.</li>
+</ul>
+<div class="callout warn"><i class="fa-solid fa-trash"></i><div><p>Deleting is permanent: there is no server-side trash or backup you can ask the admin to restore, because the server can't read your data. Export what matters (also see <a href="/wiki/your-data">backups</a>).</p></div></div>

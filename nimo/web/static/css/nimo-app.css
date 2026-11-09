@@ -8,3 +8,4 @@
 #nimo-overlay { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: rgb(36, 36, 37); color: rgb(220, 220, 210); font-family: "Noto Sans", sans-serif; }
 #nimo-overlay img { width: 64px; animation: nimo-pulse 1.6s ease-in-out infinite; }
 @keyframes nimo-pulse { 50% { opacity: .5; } }
+#nimo_wiki_button { text-decoration: none; color: inherit; }

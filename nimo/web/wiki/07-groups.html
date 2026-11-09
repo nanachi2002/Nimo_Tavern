@@ -1,0 +1,52 @@
+<!--TITLE Group chats -->
+<!--ICON fa-solid fa-users -->
+<!--GROUP Connect & chat -->
+<!--DESC Put several characters in one conversation, and decide who speaks and when. -->
+<p>A <b>group chat</b> lets two or more characters share one scene with you (and with each other). It's perfect for a party of adventurers, a tavern full of regulars, or a debate between two personalities.</p>
+
+<h2>Creating a group</h2>
+<ol class="steps">
+    <li><b>Open Character Management</b> and click the <i class="fa-solid fa-users"></i> <b>Create group</b> button.</li>
+    <li><b>Name the group</b> and add members from your character list.</li>
+    <li><b>Choose how they take turns</b> (activation strategy, below) and how their cards are combined.</li>
+    <li><b>Click the group</b> in the list to start chatting.</li>
+</ol>
+
+<!--nosearch-->
+<div class="demo" data-title="A three-character group chat">
+<div class="demo-stage"><div class="mk"><div class="mk-body"><div class="mk-chat">
+<div class="mk-msg user js-u" data-hide><div class="av">Y</div><div><div class="nm">You</div><div class="tx">Who here knows the way to the old mine?</div></div></div>
+<div class="mk-msg js-a" data-hide><div class="av" style="background:linear-gradient(135deg,#b5651d,#7a3a1d)">M</div><div><div class="nm">Captain Mira</div><div class="tx js-at"></div></div></div>
+<div class="mk-msg js-b" data-hide><div class="av" style="background:linear-gradient(135deg,#2d8a6e,#1d5a7a)">T</div><div><div class="nm">Tomas the Miner</div><div class="tx js-bt"></div></div></div>
+<div class="mk-msg js-c" data-hide><div class="av">S</div><div><div class="nm">Seraphina</div><div class="tx js-ct"></div></div></div>
+</div></div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"You ask the room a question.","at":".js-input","act":"type","text":"Who here knows the way to the old mine?"},
+ {"say":"Send it. The group decides who answers first, based on the activation strategy.","at":".js-send","act":"click","set":{".js-input":""},"show":[".js-u"]},
+ {"say":"Captain Mira jumps in first (she was mentioned most closely by the strategy).","act":"stream","show":[".js-a"],"into":".js-at","text":"<em>*She snorts.*</em> “Ask Tomas. I just fly over it.”","wait":600},
+ {"say":"Then another member replies, reacting to what Mira said.","act":"stream","show":[".js-b"],"into":".js-bt","text":"<em>*Tomas wipes his hands.*</em> “East shaft, past the three lanterns. Don't touch the blue rocks.”","wait":600},
+ {"say":"Each character only speaks for themselves, with their own card. You can also trigger a specific one manually.","act":"stream","show":[".js-c"],"into":".js-ct","text":"<em>*Seraphina smiles.*</em> “I'll walk you there at dawn.”","wait":1800}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Activation strategies: who speaks?</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Strategy</th><th>Behavior</th><th>Use it for</th></tr>
+<tr><td><b>Natural order</b></td><td>Characters are picked by being mentioned by name, by talkativeness, then at random. Feels the most like a real conversation.</td><td>Most scenes</td></tr>
+<tr><td><b>List order</b></td><td>Everyone answers in the order of the member list, one after another.</td><td>Predictable round-robin</td></tr>
+<tr><td><b>Manual</b></td><td>Nobody speaks until you click a character's portrait to trigger them.</td><td>Full control, saving tokens</td></tr>
+<tr><td><b>Pooled order</b></td><td>Everyone speaks once before anyone speaks twice.</td><td>Making sure all voices get heard</td></tr>
+</table></div>
+<p>Each member also has a <b>talkativeness</b> slider (higher = speaks more often in natural order), and you can <b>mute</b> a member temporarily without removing them. <b>Auto-mode</b> makes the group keep talking by itself after a delay you choose.</p>
+
+<h2>Joining the cards</h2>
+<p>The <b>generation mode</b> decides how character cards enter the prompt:</p>
+<ul>
+    <li><b>Swap character cards</b> (default): only the speaking character's card is sent, so each stays distinct and cheaper to run.</li>
+    <li><b>Join character cards (include muted / exclude muted)</b>: all cards are combined into one big description. Use it when the characters need to know each other's details, but it costs more tokens.</li>
+</ul>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Keep groups cheap</strong>
+<p>A group with six verbose cards in <i>Join</i> mode can eat most of your context. Prefer <i>Swap</i>, trim the cards, and put shared facts in a group-wide <a href="/wiki/world-info">lorebook</a>.</p></div></div>

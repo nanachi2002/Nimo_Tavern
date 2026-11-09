@@ -1,0 +1,67 @@
+<!--TITLE Chatting -->
+<!--ICON fa-solid fa-comments -->
+<!--GROUP Connect & chat -->
+<!--DESC Send, swipe, regenerate, continue, edit, branch, impersonate: everything you can do with a conversation. -->
+<h2>The basics</h2>
+<p>Type in the box and press <kbd>Enter</kbd> (use <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). The AI's reply streams in. While it writes, the send button becomes <b>Stop</b>.</p>
+<p>A good roleplay habit: write actions between asterisks and speech between quotes, like <code>*I lean back.* "Tell me more."</code>. The AI mirrors your style, and SillyTavern colors them (italics for actions, a highlight for quoted speech).</p>
+
+<h2>Swipes: don't like it? Roll again</h2>
+<p>Every AI message can have several alternative versions called <b>swipes</b>. Click the right arrow at the bottom right of the last message: if there is no further swipe, a new one is generated. Click the left arrow to go back. The version you stop on is the one the story continues from.</p>
+
+<!--nosearch-->
+<div class="demo" data-title="Swiping for a better reply">
+<div class="demo-stage"><div class="mk"><div class="mk-body"><div class="mk-chat">
+<div class="mk-msg user"><div class="av">Y</div><div><div class="nm">You</div><div class="tx">*I slide the map across the table.* Do you recognize this place?</div></div></div>
+<div class="mk-msg"><div class="av">M</div><div style="flex:1"><div class="nm">Captain Mira</div><div class="tx js-reply"><em>*She glances at it.*</em> “Nope. Never seen it.”</div></div>
+<div class="swipe"><i class="fa-solid fa-chevron-left js-left"></i> <span class="js-count">1/1</span> <i class="fa-solid fa-chevron-right js-right"></i></div></div>
+</div></div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"The first reply is a bit flat. Click the right arrow to generate a new swipe.","at":".js-right","act":"click","set":{".js-reply":"<span class=\"caret\"></span>",".js-count":"2/2"}},
+ {"say":"A fresh version streams in. The old one is kept.","act":"stream","into":".js-reply","text":"<em>*Her eyes narrow, and the laughter dies in her throat.*</em> “That's the Ember Reef. Nobody who flies there comes back. Where did you get this?”","wait":1800},
+ {"say":"Go back to compare with the left arrow. Nothing is lost.","at":".js-left","act":"click","set":{".js-reply":"<em>*She glances at it.*</em> “Nope. Never seen it.”",".js-count":"1/2"}},
+ {"say":"Swipe forward again and keep the better one.","at":".js-right","act":"click","set":{".js-reply":"<em>*Her eyes narrow, and the laughter dies in her throat.*</em> “That's the Ember Reef. Nobody who flies there comes back. Where did you get this?”",".js-count":"2/2"},"wait":1600}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Message actions</h2>
+<p>Hover (or tap) a message to see its icons. The <i class="fa-solid fa-ellipsis"></i> menu holds the rest.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Action</th><th>What it does</th></tr>
+<tr><td><i class="fa-solid fa-pencil"></i> <b>Edit</b></td><td>Change the text of any message, yours or the AI's. Editing the AI's lines is how you steer the story or fix mistakes before they spread.</td></tr>
+<tr><td><i class="fa-solid fa-eye-slash"></i> <b>Hide</b></td><td>Keeps the message visible to you but excludes it from what the AI reads.</td></tr>
+<tr><td><i class="fa-solid fa-copy"></i> <b>Copy</b></td><td>Copies the message text.</td></tr>
+<tr><td><i class="fa-solid fa-trash"></i> <b>Delete</b></td><td>Removes the message (and optionally everything after).</td></tr>
+<tr><td><i class="fa-solid fa-flag-checkered"></i> <b>Checkpoint</b></td><td>Creates a <b>new chat</b> that starts at this point and links back to the original. Perfect for "what if" paths.</td></tr>
+<tr><td><i class="fa-solid fa-code-branch"></i> <b>Branch</b></td><td>Like a checkpoint, but meant for splitting off alternate storylines.</td></tr>
+<tr><td><i class="fa-solid fa-arrow-up"></i><i class="fa-solid fa-arrow-down"></i> <b>Move</b></td><td>Reorders a message.</td></tr>
+</table></div>
+
+<h2>The options menu <i class="fa-solid fa-bars"></i></h2>
+<ul>
+    <li><b>Regenerate</b>: throws away the last AI message and writes a new one (it replaces instead of adding a swipe, depending on your settings).</li>
+    <li><b>Continue</b>: the AI keeps writing the last message from where it stopped. Use it when a reply was cut off.</li>
+    <li><b>Impersonate</b>: the AI writes a message <i>as you</i>, in your input box, so you can edit or send it. Handy when you're out of ideas.</li>
+    <li><b>Start new chat</b> / <b>Manage chat files</b>: open, rename, or delete past conversations with this character. Each character can have as many chats as you like.</li>
+    <li><b>Attach a file</b>: add a document to the chat as extra reference material for the AI.</li>
+    <li><b>Close chat</b>: go back to the character list.</li>
+</ul>
+
+<h2>Guiding the story without writing it</h2>
+<ul>
+    <li><b>Author's Note</b>: a hidden instruction inserted into the prompt every few messages (for example "the story is set in winter, keep the mood tense"). Open it from the options menu. You choose how deep in the chat it sits and how often it's repeated.</li>
+    <li><b>Quick Replies</b>: a row of buttons that send pre-written messages or run scripts; see <a href="/wiki/extensions">Extensions</a>.</li>
+    <li><b>System messages</b>: <code>/sys text</code> adds a narrator line, see <a href="/wiki/commands">commands</a>.</li>
+    <li><b>Edit &amp; continue</b>: write the first words of the AI's next reply yourself, then press Continue to make it finish in your direction.</li>
+</ul>
+
+<h2>Long chats and memory</h2>
+<p>The AI doesn't remember the chat, it <i>re-reads</i> it each time, up to the context limit. When the chat is longer than the limit, the oldest messages simply stop being sent. To keep important facts alive, use the <b>Summarize</b> extension, a <a href="/wiki/world-info">lorebook</a>, or put key facts in the Author's Note. The <a href="/wiki/prompt">context visualizer</a> shows this happening.</p>
+
+<h2>Exporting a chat</h2>
+<p>Chats are stored as <code>.jsonl</code> files (one message per line). You can export a chat from the chat-files manager, or export your entire tavern from <b>Account → Export decrypted backup</b>, see <a href="/wiki/your-data">Your data</a>.</p>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Mobile</strong>
+<p>On a phone, tap a message to reveal its icons, and swipe left/right on the last message to change swipes if your UI theme has gestures enabled.</p></div></div>

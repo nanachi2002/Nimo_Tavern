@@ -1,0 +1,78 @@
+<!--TITLE Getting started -->
+<!--ICON fa-solid fa-rocket -->
+<!--GROUP Start -->
+<!--DESC From zero to your first AI reply in about ten minutes: account, recovery phrase, connecting an AI, picking a character. -->
+<h2>What is NimoTavern?</h2>
+<p><b>SillyTavern</b> is an interface for talking to AI language models. It doesn't contain an AI itself: it connects to one (OpenAI, Claude, Gemini, DeepSeek, OpenRouter, or a model running on your own PC) and adds everything around it: characters, memory, lorebooks, presets, group chats, themes and much more.</p>
+<p><b>NimoTavern</b> is the same SillyTavern, hosted for you, with one big difference: <b>everything you save is encrypted in your browser first</b>. The server only ever holds unreadable data. You don't have to install anything, and your chats follow you to every device.</p>
+
+<div class="flow3">
+    <div class="node you"><i class="fa-solid fa-laptop"></i><b>Your browser</b><br>runs SillyTavern, holds your keys</div>
+    <div class="wire"></div>
+    <div class="node srv"><i class="fa-solid fa-database"></i><b>NimoTavern server</b><br>stores encrypted blobs only</div>
+    <div class="wire"></div>
+    <div class="node"><i class="fa-solid fa-brain"></i><b>The AI provider</b><br>receives your prompts directly</div>
+</div>
+
+<h2>Setup in five steps</h2>
+<ol class="steps">
+    <li><b>Create your account</b>
+        Go to the <a href="/register">sign-up page</a>, pick a username (3–32 characters: letters, numbers, <code>_ . -</code>) and a strong password of at least 10 characters. No email needed.</li>
+    <li><b>Save your recovery phrase</b>
+        You'll see 12 words. They are the <u>only</u> way to get back in if you forget your password, because nobody (not even the admin) can reset it. Download or copy them somewhere safe, like a password manager, then tick the box.</li>
+    <li><b>Connect an AI</b>
+        Click the plug icon at the top, choose a provider, paste your API key. <a href="/wiki/connect-ai">Full guide here</a>.</li>
+    <li><b>Pick or import a character</b>
+        Open the character panel (right-most icon). Seraphina is included. Import your own cards with the <i class="fa-solid fa-file-import"></i> button. <a href="/wiki/characters">Characters guide</a>.</li>
+    <li><b>Say hello</b>
+        Type in the box at the bottom and press <kbd>Enter</kbd>. Watch the answer stream in. <a href="/wiki/chatting">Chatting guide</a>.</li>
+</ol>
+
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Opened the link inside Discord, Instagram or another app?</strong>
+<p>Those built-in browsers can't run NimoTavern (especially on iPhone). Tap <b>•••</b> or the share icon and choose <b>Open in Safari</b> (or Chrome) first. Private/incognito tabs can block it too.</p></div></div>
+
+<h2>Your first minute, animated</h2>
+<p>Here is what steps 4 and 5 look like in the real interface. The demo plays on its own when you scroll to it; use the controls to replay or step through it.</p>
+
+<!--nosearch-->
+<div class="demo" data-title="NimoTavern: first chat">
+<div class="demo-stage"><div class="mk">
+{{include:topbar}}
+<div class="mk-body">
+    <div class="mk-drawer right js-drawer" data-hide>
+        <h5><i class="fa-solid fa-address-card"></i> Character Management</h5>
+        <div class="text_pole"><i class="fa-solid fa-magnifying-glass" style="opacity:.6;margin-right:6px"></i> Search…</div>
+        <div class="mk-card js-sera"><div class="av">S</div><div><b>Seraphina</b><small>Forest guardian · tavern keeper</small></div></div>
+        <div class="mk-card"><div class="av" style="background:linear-gradient(135deg,#2d8a6e,#1d5a7a)">C</div><div><b>Coding Sensei</b><small>Patient programming tutor</small></div></div>
+        <div class="mk-card"><div class="av" style="background:linear-gradient(135deg,#8a2d5a,#5a1d7a)">B</div><div><b>Bob the Bartender</b><small>Knows every rumor in town</small></div></div>
+    </div>
+    <div class="mk-chat">
+        <div class="mk-file js-empty"><i class="fa-solid fa-comments" style="font-size:28px"></i><br>No character selected. Open the character panel.</div>
+        <div class="mk-msg js-greet" data-hide><div class="av">S</div><div><div class="nm">Seraphina</div><div class="tx"><em>*Seraphina looks up as you step inside the warm, lantern-lit tavern.*</em> <q>“Welcome, traveler. You look like you've walked a long way.”</q></div></div></div>
+        <div class="mk-msg user js-me" data-hide><div class="av">Y</div><div><div class="nm">You</div><div class="tx">Hi! Is this seat taken?</div></div></div>
+        <div class="mk-msg js-reply" data-hide><div class="av">S</div><div><div class="nm">Seraphina</div><div class="tx js-reply-tx"></div></div></div>
+    </div>
+</div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"The tavern is empty. First, open the Character Management panel (the right-most icon).","at":".js-chars","act":"click","show":[".js-drawer"]},
+ {"say":"Pick a character card. Seraphina comes built in.","at":".js-sera","act":"click","hide":[".js-drawer",".js-empty"],"show":[".js-greet"]},
+ {"say":"Type your message in the box at the bottom.","at":".js-input","act":"type","text":"Hi! Is this seat taken?"},
+ {"say":"Press Enter (or the paper plane) to send.","at":".js-send","act":"click","set":{".js-input":""},"show":[".js-me"]},
+ {"say":"The reply streams in word by word, directly from your AI provider to your browser.","act":"stream","show":[".js-reply"],"into":".js-reply-tx","text":"<em>*She sets down the glass she was polishing.*</em> <q>“Not at all. Sit, rest. What brings you to the Gilded Stag?”</q>","wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<h2>What's different from "normal" SillyTavern?</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Topic</th><th>Local SillyTavern</th><th>NimoTavern</th></tr>
+<tr><td>Install</td><td>Node.js, git, a terminal</td><td>None: open the website</td></tr>
+<tr><td>Where files live</td><td>A folder on your PC</td><td>Encrypted in your browser, synced as ciphertext</td></tr>
+<tr><td>Accounts</td><td>Optional, shared server login</td><td>Per-person, zero-knowledge</td></tr>
+<tr><td>Who can read your chats</td><td>Whoever has the PC</td><td>Only you (with your password / recovery phrase)</td></tr>
+<tr><td>Server-side extras (vectors, captioning)</td><td>Available</td><td><span class="badge no">Disabled</span> they'd need plaintext on the server</td></tr>
+<tr><td>Admin panel</td><td>Yes</td><td>Hidden, replaced by your <a href="/wiki/account">Account page</a></td></tr>
+</table></div>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Next step</strong><p>Learn the screen: <a href="/wiki/interface">Interface tour</a>.</p></div></div>

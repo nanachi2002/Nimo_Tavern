@@ -1,0 +1,47 @@
+<!--TITLE Verify it yourself -->
+<!--ICON fa-solid fa-magnifying-glass-chart -->
+<!--GROUP Privacy & your data -->
+<!--DESC Don't trust, check: use your browser's developer tools to see that your data leaves encrypted and that keys stay on your device. -->
+<p>Good security claims are testable. These checks use only your browser's built-in <b>developer tools</b> (press <kbd>F12</kbd>, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>; on Mac <kbd>⌘</kbd>+<kbd>Option</kbd>+<kbd>I</kbd>). You don't need to be a programmer.</p>
+
+<h2>Check 1: what you upload is unreadable</h2>
+<ol class="steps">
+    <li><b>Log in</b> and open the tavern. Open developer tools and go to the <b>Network</b> tab. Tick "Preserve log".</li>
+    <li><b>Change something</b> recognizable: send a message containing a unique word like <code>zebra-banana-4412</code>, or edit a persona.</li>
+    <li><b>Look for requests to <code>/api/nimo/blobs</code></b> (type <code>blobs</code> in the filter box). Click one and open the <b>Payload</b>/<b>Request</b> tab.</li>
+    <li><b>Search all requests</b> for your unique word (the Network tab has a search: <kbd>Ctrl</kbd>+<kbd>F</kbd> inside it). You will find nothing. What you'll see is an id of hex characters and an opaque encrypted body.</li>
+</ol>
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><p>Notice there are no requests carrying your message text to <code>nimorp.lol</code> at all. When you generate a reply, the request goes to <b>your AI provider's</b> domain (for example <code>openrouter.ai</code>), not to this site, unless you enabled the relay.</p></div></div>
+
+<h2>Check 2: your API key never goes to NimoTavern</h2>
+<ol class="steps">
+    <li><b>Stay on the Network tab</b> and clear the log.</li>
+    <li><b>Send a chat message.</b> Find the request that generates the reply: its domain is your provider's.</li>
+    <li><b>Open its Headers.</b> The Authorization header with your key goes to that provider only. Filter by <code>nimorp.lol</code>: no request there contains your key or your prompt.</li>
+</ol>
+<div class="callout warn"><i class="fa-solid fa-user-shield"></i><div><p>If you turned on <b>Always use the relay</b> in your Account page, requests to <code>/api/nimo/relay</code> <i>will</i> carry the prompt and key (to the server's memory, not disk). That's why it's opt-in.</p></div></div>
+
+<h2>Check 3: the local copy is encrypted too</h2>
+<ol class="steps">
+    <li>In developer tools open the <b>Application</b> tab (Chrome/Edge) or <b>Storage</b> (Firefox).</li>
+    <li>Expand <b>IndexedDB</b>. You'll see <code>nimo-cache</code> and <code>nimo-keys</code>.</li>
+    <li>Open <code>nimo-cache</code> → <code>blobs</code>: the values are encrypted bytes, not your chats.</li>
+    <li>Open <code>nimo-keys</code>: the keys are stored as <b>CryptoKey</b> objects. Click one: it shows as an opaque object whose raw value can't be exported (non-extractable).</li>
+</ol>
+
+<h2>Check 4: logout really wipes it</h2>
+<p>Click <b>Logout</b> in the tavern, then look at IndexedDB again: the databases are gone. That's the local keys and the local encrypted copy deleted from that device.</p>
+
+<h2>Check 5: the code that runs the tavern</h2>
+<ul>
+    <li><b>The Service Worker</b> (<i>Application → Service Workers</i>) is SillyTavern's server code running locally. Its source is <code>/nimo-sw.js</code>; you can open it in a tab.</li>
+    <li><b>The page's security policy:</b> in the Network tab click the main document and read the <code>Content-Security-Policy</code> response header. It lists exactly which servers the page may contact.</li>
+    <li><b>The source code</b> is public under AGPL-3.0 (see the <a href="/source">source link</a> in the footer). The NimoTavern-specific part is in the <code>nimo/</code> folder: <code>shared/crypto.js</code> contains all the key handling, and it's short enough to read in an afternoon.</li>
+    <li><b>Build it yourself.</b> The repository README explains how to build the same bundles from source, so you can read what you built or host your own copy. (Builds aren’t guaranteed byte-for-byte identical, so compare behavior and code, not hashes.)</li>
+</ul>
+
+<h2>Check 6: what the server says about you</h2>
+<p>Open <code>/api/nimo/auth/me</code> in a tab while logged in. You'll see the data the server associates with your account: username, creation date, used bytes. That's it.</p>
+
+<div class="callout secure"><i class="fa-solid fa-scale-balanced"></i><div><strong class="t">What these checks prove, and what they don't</strong>
+<p>They show that <i>this version of the code, as served to you right now</i> encrypts before sending and keeps keys local. They can't prove tomorrow's code will behave the same: that's the inherent limit of any web app, and the reason the source is public and the honest limitations are listed on the <a href="/wiki/security#the-honest-limits">security page</a>.</p></div></div>

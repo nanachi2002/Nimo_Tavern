@@ -88,14 +88,24 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
-        style.textContent = '#logout_button,#account_button{display:flex !important}#admin_button{display:none !important}';
+        style.textContent = '#logout_button,#account_button,#nimo_wiki_button{display:flex !important}#admin_button{display:none !important}';
         document.head.append(style);
         const acct = document.getElementById('account_button');
-        if (acct) acct.title = 'NimoTavern account, privacy & encryption';
+        if (acct) {
+            acct.title = 'NimoTavern account, privacy & encryption';
+            // Wiki button right next to Account (opens in a new tab so the tavern keeps running).
+            const wiki = document.createElement('a');
+            wiki.id = 'nimo_wiki_button';
+            wiki.className = 'margin0 menu_button_icon menu_button';
+            wiki.href = '/wiki'; wiki.target = '_blank'; wiki.rel = 'noopener';
+            wiki.title = 'NimoTavern Wiki: guides for every feature, and how your privacy is protected';
+            wiki.innerHTML = '<i class="fa-fw fa-solid fa-book-open"></i><span>Wiki</span>';
+            acct.after(wiki);
+        }
         const ver = document.getElementById('version_display');
         if (ver) {
             const note = document.createElement('small');
-            note.innerHTML = ' · <a href="/privacy" target="_blank" style="color:inherit"><i class="fa-solid fa-lock"></i> NimoTavern, end-to-end encrypted</a>';
+            note.innerHTML = ' · <a href="/wiki" target="_blank" style="color:inherit"><i class="fa-solid fa-book-open"></i> Wiki</a> · <a href="/privacy" target="_blank" style="color:inherit"><i class="fa-solid fa-lock"></i> NimoTavern, end-to-end encrypted</a>';
             ver.after(note);
         }
     });

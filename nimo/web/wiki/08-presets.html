@@ -1,0 +1,59 @@
+<!--TITLE AI settings & presets -->
+<!--ICON fa-solid fa-sliders -->
+<!--GROUP Shape the AI -->
+<!--DESC Temperature, top-p, response length, penalties and presets: what every slider in AI Response Configuration really does. -->
+<p>The <i class="fa-solid fa-sliders"></i> panel controls <b>how</b> the AI writes. You don't need to touch it at first: the default preset works. But a few sliders make a huge difference, and understanding them lets you tune the AI to your taste.</p>
+
+<h2>How an AI picks its next word</h2>
+<p>A language model writes one token at a time. For each position it gives every possible token a score, and the sampler settings decide how to choose among them. Play with the playground to feel it: <b>Precise</b> almost always picks the top word, <b>Wild</b> lets unlikely words through.</p>
+
+<!--nosearch-->
+<div class="widget" data-widget="sampler"></div>
+<!--/nosearch-->
+
+<h2>The settings, in plain language</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Setting</th><th>What it does</th><th>Typical</th></tr>
+<tr><td><b>Temperature</b></td><td>Randomness. Low = focused and predictable, high = creative and chaotic. It reshapes the whole distribution (watch the bars flatten).</td><td>0.7–1.1</td></tr>
+<tr><td><b>Top K</b></td><td>Only the K most likely tokens are allowed. <code>0</code> usually means off.</td><td>off or 40+</td></tr>
+<tr><td><b>Top P</b></td><td>Keep the smallest group of tokens whose probabilities add up to P, drop the long tail of unlikely ones.</td><td>0.9–1</td></tr>
+<tr><td><b>Min P</b></td><td>Drop tokens less than X% as likely as the best one. A modern, adaptive way to cut nonsense while keeping variety.</td><td>0.02–0.1</td></tr>
+<tr><td><b>Repetition penalty</b></td><td>Discourages repeating recent words. Too high makes the AI avoid normal words and write strangely.</td><td>1.0–1.15</td></tr>
+<tr><td><b>Frequency / presence penalty</b></td><td>Chat-completion versions of the above: lower the odds of words already used.</td><td>0–0.5</td></tr>
+<tr><td><b>Response length (max tokens)</b></td><td>The most the AI may write per reply (not a target). 1 token ≈ ¾ word.</td><td>250–600</td></tr>
+<tr><td><b>Context size</b></td><td>How many tokens of history, card and lore are sent. Set it to what your <i>model</i> supports and your <i>budget</i> allows, see <a href="/wiki/prompt">Prompt &amp; context</a>.</td><td>8k–32k+</td></tr>
+<tr><td><b>Streaming</b></td><td>Show the reply as it's written, instead of waiting for the whole thing.</td><td>On</td></tr>
+</table></div>
+
+<div class="callout note"><i class="fa-solid fa-circle-info"></i><div><p>Which sliders you see depends on the API you picked. Some providers ignore or hide settings they don't support (for example Claude and OpenAI models don't use Top K / Min P in the same way). That's normal.</p></div></div>
+
+<h2>Presets</h2>
+<p>A <b>preset</b> is a saved set of values. The preset menu at the top of the panel lets you:</p>
+<ol class="steps">
+    <li><b>Select</b> a preset from the dropdown to apply it instantly.</li>
+    <li><b>Adjust</b> any slider. The preset name gets a "modified" marker.</li>
+    <li><b>Save</b> <i class="fa-solid fa-floppy-disk"></i> to overwrite, or <b>Save as</b> to make a new one.</li>
+    <li><b>Import / export</b> <i class="fa-solid fa-file-import"></i> presets as JSON to share them or move them between devices.</li>
+</ol>
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><p>Presets are per API type. Chat-completion presets also include the <b>Prompt Manager</b> (below), so people share "jailbreak-free roleplay presets" as a single file.</p></div></div>
+
+<h2>Prompt Manager (Chat Completion)</h2>
+<p>With Chat Completion, the panel includes a <b>Prompt Manager</b>: an ordered list of blocks that become the final message list sent to the model. Each block can be toggled on or off and dragged to reorder.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Block</th><th>Contains</th></tr>
+<tr><td>Main Prompt</td><td>The core instructions ("You are roleplaying as {{char}}…").</td></tr>
+<tr><td>Character / Persona / Scenario / Personality</td><td>The cards' fields, injected where you place them.</td></tr>
+<tr><td>World Info (before / after)</td><td>Triggered lorebook entries.</td></tr>
+<tr><td>Chat History</td><td>The conversation itself.</td></tr>
+<tr><td>Post-History Instructions</td><td>Final reminders after the chat, where the AI listens most.</td></tr>
+<tr><td>Custom prompts</td><td>Anything you write yourself: style guides, formatting rules, reminders.</td></tr>
+</table></div>
+<p>The little numbers show how many tokens each block costs. If your prompt is too big, this is where you see what to cut.</p>
+
+<h2>Recipes</h2>
+<div class="tabs">
+<div class="tab" data-label="Careful / factual"><p>Temperature <b>0.3–0.6</b>, Min P 0.05. Replies stay on-topic and consistent. Good for tutoring, coding, or strict canon.</p></div>
+<div class="tab" data-label="Balanced roleplay"><p>Temperature <b>0.9–1.1</b>, Min P <b>0.05</b> (or Top P 0.95), response length 300–500. A reliable default for stories.</p></div>
+<div class="tab" data-label="Wild creative"><p>Temperature <b>1.3+</b> with Min P <b>0.1</b> to keep it from derailing. Surprising and fun; expect the occasional odd turn.</p></div>
+<div class="tab" data-label="Fixing repetition"><p>Raise temperature slightly, add a small repetition/frequency penalty, edit out repeated phrases from recent messages (the AI copies what it sees), and vary your own writing.</p></div>
+</div>

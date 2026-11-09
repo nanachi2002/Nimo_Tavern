@@ -1,0 +1,72 @@
+<!--TITLE Your account -->
+<!--ICON fa-solid fa-user-shield -->
+<!--GROUP Privacy & your data -->
+<!--DESC Recovery phrase, forgotten passwords, changing your password, signing out everywhere and deleting your account. -->
+<p>Open your account page with <b>User Settings → Account</b> in the tavern (or go to <code>/account</code>). Here's everything on it, and the two situations where it matters most.</p>
+
+<h2>Your recovery phrase</h2>
+<p>When you signed up, you were shown <b>12 words</b>. They're a second key to your data. Because nobody else can reset your password, the phrase is the <i>only</i> way back in if you forget it.</p>
+<div class="nimo-phrase" style="max-width:420px"><span>river</span><span>candle</span><span>orbit</span><span>velvet</span><span>harbor</span><span>maple</span><span>glimmer</span><span>token</span><span>drift</span><span>amber</span><span>forest</span><span>whisper</span></div>
+<p class="nimo-muted">(An example. Yours is different and only shown once.)</p>
+<div class="callout danger"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Store it like a master key</strong>
+<ul>
+<li>Save it in a password manager or write it on paper kept somewhere safe.</li>
+<li><b>Never</b> share it, and never type it into any site other than NimoTavern's own <code>/recover</code> page. Anyone with your username and phrase can take over your account.</li>
+<li>It's shown only at sign-up and when you generate a new one. NimoTavern can't show it again because it doesn't know it.</li>
+</ul></div></div>
+
+<h2>Forgot your password?</h2>
+<!--nosearch-->
+<div class="demo" data-title="Recovering an account">
+<div class="demo-stage" style="min-height:330px;display:flex;align-items:center;justify-content:center"><div class="nimo-glass" style="width:min(380px,92%);padding:16px;display:flex;flex-direction:column;gap:8px;text-align:left">
+<b style="font-size:1.1em"><i class="fa-solid fa-life-ring nimo-quote"></i> Recover your account</b>
+<label style="font-size:12px;color:var(--SmartThemeEmColor)">Username<div class="text_pole js-user" style="min-height:30px;display:flex;align-items:center"></div></label>
+<label style="font-size:12px;color:var(--SmartThemeEmColor)">Recovery phrase (12 words)<div class="text_pole js-phrase" style="min-height:48px"></div></label>
+<label style="font-size:12px;color:var(--SmartThemeEmColor)">New password<div class="text_pole js-pw" style="min-height:30px;display:flex;align-items:center;letter-spacing:2px"></div></label>
+<div class="menu_button primary js-go" style="width:auto;display:inline-flex;justify-content:center"><i class="fa-solid fa-unlock"></i>&nbsp;Reset password</div>
+<div class="nimo-ok js-ok" data-hide>Done! Now save your NEW recovery phrase: the old one no longer works.</div>
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"Go to the Recover page (the login page links to it). Enter your username.","at":".js-user","act":"type","text":"alex_courier"},
+ {"say":"Enter your 12 recovery words, in order.","at":".js-phrase","act":"type","text":"river candle orbit velvet harbor maple glimmer token drift amber forest whisper"},
+ {"say":"Choose a new password.","at":".js-pw","act":"type","text":"a long new passphrase","mask":true},
+ {"say":"Your browser opens the key box with the phrase, re-locks it with the new password, and creates a fresh recovery phrase.","at":".js-go","act":"click","show":[".js-ok"],"wait":2400}
+]</script></div>
+<!--/nosearch-->
+<ol class="steps">
+    <li><b>Open <code>/recover</code></b> (link on the login page).</li>
+    <li><b>Enter your username and the 12 words</b> (spelling and order matter).</li>
+    <li><b>Choose a new password</b> (at least 10 characters).</li>
+    <li><b>Save your NEW recovery phrase.</b> The old one is retired the moment the reset completes.</li>
+</ol>
+<p>Your chats and characters are intact: the recovery re-locks the same data key, it doesn't re-create it.</p>
+
+<h2>What's on the account page</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Section</th><th>What it does</th></tr>
+<tr><td><b>Header &amp; storage bar</b></td><td>Your username, when the account was created, and how much of your quota you've used.</td></tr>
+<tr><td><b>Provider connection (relay)</b></td><td>Opt-in relay for providers that block browser requests, with a "fallback only" and an "always" mode. Off by default. See <a href="/wiki/connect-ai#the-optional-relay">the relay</a>.</td></tr>
+<tr><td><b>Change password</b></td><td>Enter your current and a new password. Instant, no re-encryption of your data.</td></tr>
+<tr><td><b>New recovery phrase</b></td><td>Generates a fresh 12-word phrase (after you confirm your password). The old phrase stops working.</td></tr>
+<tr><td><b>Export decrypted backup</b></td><td>Downloads a zip of everything in SillyTavern's folder layout. <b>Unencrypted</b>: guard it.</td></tr>
+<tr><td><b>Log out everywhere</b></td><td>Ends every session on every device. Use it if a device is lost or you suspect someone else has access.</td></tr>
+<tr><td><b>Delete account</b></td><td>Permanently deletes your account and all its encrypted data from the server, and wipes this device.</td></tr>
+</table></div>
+
+<h2>Choosing a good password</h2>
+<ul>
+    <li><b>Length beats complexity.</b> Four or five unrelated words ("copper-lantern-orbit-pancake-ferry") is strong and memorable.</li>
+    <li><b>Use one you've never used elsewhere.</b> A reused password that leaks somewhere else lets attackers try it here.</li>
+    <li><b>Use a password manager</b> and store the recovery phrase in it too (or on paper, separately).</li>
+</ul>
+
+<h2>Deleting your account</h2>
+<ol class="steps">
+    <li><b>Export a backup first</b> if you might want your data later.</li>
+    <li><b>Open Account → Delete account</b> and confirm with your password.</li>
+    <li><b>Done.</b> All your encrypted blobs, sessions and account records are removed from the database, and your browser's local copy is wiped. The username becomes free again.</li>
+</ol>
+<div class="callout danger"><i class="fa-solid fa-trash"></i><div><p>This cannot be undone and cannot be recovered from backups: there are no plaintext backups, and the encrypted copies are deleted with the account.</p></div></div>
+
+<h2>Signing in from a new place</h2>
+<p>Your password is all you need on a new device. The recovery phrase is <i>not</i> a login method for daily use, only for resets. If a browser is unsupported (in-app browsers inside Discord, Instagram and similar), you'll see an instruction to open the page in Safari or Chrome instead.</p>

@@ -1,5 +1,6 @@
 // Builds the NimoTavern Service Worker (SillyTavern server code running in the browser)
 // and the NimoTavern web pages.
+import { buildWiki } from './build-wiki.mjs';
 import * as esbuild from 'esbuild';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -170,11 +171,12 @@ function copyWasm() {
 
 export async function buildWeb({ minify = true } = {}) {
     await esbuild.build({
-        entryPoints: { 'nimo-auth': path.join(here, 'web/js/auth.js'), 'nimo-boot': path.join(here, 'web/js/boot.js'), 'nimo-account': path.join(here, 'web/js/account.js') },
+        entryPoints: { 'nimo-auth': path.join(here, 'web/js/auth.js'), 'nimo-boot': path.join(here, 'web/js/boot.js'), 'nimo-account': path.join(here, 'web/js/account.js'), 'nimo-wiki': path.join(here, 'web/js/wiki.js') },
         bundle: true, format: 'iife', platform: 'browser', target: ['chrome110', 'firefox115', 'safari16'],
         outdir: path.join(here, 'dist/public/nimo/js'), minify, logLevel: 'info', loader: { '.wasm': 'binary' },
     });
     buildPages();
+    buildWiki();
 }
 
 /** Wrap each page body in the shared layout. Pages declare <!--TITLE -->, <!--NAV -->, <!--HEAD --> comments. */

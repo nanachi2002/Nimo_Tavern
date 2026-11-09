@@ -1,0 +1,44 @@
+<!--TITLE Themes & customization -->
+<!--ICON fa-solid fa-palette -->
+<!--GROUP Make it yours -->
+<!--DESC Colors, fonts, chat layout, backgrounds and custom CSS: make the tavern look exactly how you like. -->
+<p>NimoTavern keeps SillyTavern's full theming system, and the site pages around it (home, login, this wiki) use the same colors so everything matches. Everything lives in <i class="fa-solid fa-user-gear"></i> <b>User Settings</b>.</p>
+
+<h2>Playground</h2>
+<!--nosearch-->
+<div class="widget" data-widget="theme"></div>
+<!--/nosearch-->
+
+<h2>UI Theme</h2>
+<ol class="steps">
+    <li><b>Open User Settings</b> and find the <b>UI Theme</b> section.</li>
+    <li><b>Pick a theme</b> from the dropdown to apply it instantly. Several are included.</li>
+    <li><b>Tweak colors</b>: main text, italics, quote, shadow, border, and the tints behind the panels and messages. Each swatch opens a color picker with transparency.</li>
+    <li><b>Save</b> with <i class="fa-solid fa-floppy-disk"></i> under a new name. Themes can be imported/exported as JSON to share.</li>
+</ol>
+
+<h2>Chat appearance</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Option</th><th>Effect</th></tr>
+<tr><td><b>Message display style</b></td><td><i>Flat</i> (classic list), <i>Bubbles</i> (messenger-like) or <i>Document</i> (plain, like a novel).</td></tr>
+<tr><td><b>Avatar style</b></td><td>Round, rectangular, or large "portrait" avatars.</td></tr>
+<tr><td><b>Blur strength / shadow</b></td><td>Strength of the frosted-glass panels. Lower it on slow phones.</td></tr>
+<tr><td><b>Font scale / width</b></td><td>Text size and how wide the chat column is.</td></tr>
+<tr><td><b>Show timestamps, message numbers, token counts</b></td><td>Toggle the little details under each message.</td></tr>
+<tr><td><b>Auto-hide / streaming FPS</b></td><td>Performance helpers for long chats or low-end devices.</td></tr>
+<tr><td><b>Language &amp; sounds</b></td><td>Interface language and notification sounds.</td></tr>
+</table></div>
+
+<h2>Backgrounds</h2>
+<p>The <i class="fa-solid fa-panorama"></i> icon opens the background picker. Click one to apply it. Use <b>Upload</b> to add your own image (it's stored encrypted in your tavern, like everything else). A background can be locked to a specific chat so different stories get different scenery.</p>
+
+<h2>Custom CSS</h2>
+<p>For full control, paste CSS into <b>User Settings → Custom CSS</b>. It takes effect right away and is saved with your settings. Example: bigger quote highlights and rounder messages:</p>
+<pre><code>.mes_text q { color: #ffb86c; }
+.mes { border-radius: 16px !important; }
+#chat { max-width: 900px; margin: 0 auto; }</code></pre>
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><p>Colors are CSS variables like <code>--SmartThemeBodyColor</code> and <code>--SmartThemeQuoteColor</code>. Changing a variable is safer than overriding individual elements, and keeps working after updates.</p></div></div>
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><p>Only paste CSS you understand. CSS can hide buttons (including <i>Logout</i>). Change one thing at a time, keep a copy of your last working CSS, and avoid rules that hide whole panels or buttons you rely on.</p></div></div>
+
+<h2>Movable UI</h2>
+<p>Enable <b>Movable UI</b> to drag and resize panels (character, persona, lorebook…) and save the layout as a <i>UI preset</i>, useful on large monitors.</p>

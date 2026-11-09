@@ -1,0 +1,54 @@
+<!--TITLE Personas -->
+<!--ICON fa-solid fa-face-smile -->
+<!--GROUP Connect & chat -->
+<!--DESC Define who you are in the story: your name, avatar and background, and switch identities per character. -->
+<p>The character card says who <i>they</i> are. A <b>persona</b> says who <i>you</i> are. The AI reads your persona's description every time, so it knows your name, appearance, role in the story, and anything it should treat as fact about you.</p>
+
+<h2>Creating a persona</h2>
+<ol class="steps">
+    <li><b>Open Persona Management</b> (the smiley icon).</li>
+    <li><b>Click <i class="fa-solid fa-plus"></i> Create</b> and choose an avatar.</li>
+    <li><b>Set the name</b> that appears on your messages. This is what <code>{{user}}</code> turns into.</li>
+    <li><b>Write the description</b>: who you are in the story. Short is fine: <i>"Alex, a 24-year-old courier carrying a stolen map. Nervous, quick on their feet."</i></li>
+</ol>
+
+<!--nosearch-->
+<div class="demo tall" data-title="Creating a persona">
+<div class="demo-stage"><div class="mk">
+{{include:topbar}}
+<div class="mk-body">
+    <div class="mk-drawer left wide js-drawer" data-hide>
+        <h5><i class="fa-solid fa-face-smile"></i> Persona Management <span class="menu_button green js-new" style="margin-left:auto"><i class="fa-solid fa-plus"></i> Create</span></h5>
+        <div class="mk-card"><div class="av" style="background:linear-gradient(135deg,#3d8c5a,#2e6b8c)">Y</div><div><b>You</b><small>Default persona</small></div></div>
+        <div class="js-form" data-hide style="display:flex;flex-direction:column;gap:6px">
+            <label>Persona name <div class="text_pole js-name"></div></label>
+            <label>Description <div class="text_pole js-desc" style="min-height:52px;align-items:flex-start"></div></label>
+            <label>Position <div class="text_pole fake-select">In Story String / Prompt Manager</div></label>
+        </div>
+    </div>
+    <div class="mk-toast js-toast" data-hide><i class="fa-solid fa-circle-check"></i> Persona saved</div>
+</div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"Open Persona Management with the smiley icon.","at":".js-persona","act":"click","show":[".js-drawer"]},
+ {"say":"Click Create for a new persona.","at":".js-new","act":"click","show":[".js-form"]},
+ {"say":"Pick the name the story will call you.","at":".js-name","act":"type","text":"Alex"},
+ {"say":"Describe yourself in a sentence or two.","at":".js-desc","act":"type","text":"A 24-year-old courier carrying a stolen map. Nervous, quick on their feet."},
+ {"say":"It saves as you type. From now on the AI knows who you are.","show":[".js-toast"],"wait":1800}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Where the description goes</h2>
+<p>Under the description box there is a <b>position</b> setting. The default (in the main prompt, next to the character card) is right for nearly everyone. Other options insert the persona higher or lower in the chat, or into the Author's Note. If the AI keeps forgetting who you are, try a position closer to the end of the chat.</p>
+
+<h2>Several personas</h2>
+<p>You can keep as many personas as you want: "Alex the courier", "Lady Isolde", "narrator". Click a persona to activate it, and use the lock buttons:</p>
+<ul>
+    <li><i class="fa-solid fa-lock"></i> <b>Lock to this chat</b>: this persona is used in this conversation only.</li>
+    <li><i class="fa-solid fa-lock"></i> <b>Lock to this character</b>: whenever you open this character, this persona is picked automatically.</li>
+    <li><b>Default persona</b>: used everywhere that isn't locked.</li>
+</ul>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Don't over-write it</strong>
+<p>A persona is sent with every message. Keep it to what matters for the story, a few lines. Details about the <i>world</i> belong in a <a href="/wiki/world-info">lorebook</a> instead.</p></div></div>
+
+<div class="callout secure"><i class="fa-solid fa-lock"></i><div><p>Your name and avatar are part of your encrypted data like everything else; they don't leave your browser except in the prompts you send to your AI provider.</p></div></div>

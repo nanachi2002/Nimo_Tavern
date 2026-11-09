@@ -1,0 +1,60 @@
+<!--TITLE Slash commands & macros -->
+<!--ICON fa-solid fa-terminal -->
+<!--GROUP Shape the AI -->
+<!--DESC Type / in the message box for shortcuts, and use {{macros}} to make cards and prompts dynamic. -->
+<p>Type <code>/</code> in the message box and SillyTavern shows an autocomplete list of <b>slash commands</b>. They're shortcuts for actions: add a narrator line, trigger a reply, run a quick script. <code>/help</code> lists everything your version supports.</p>
+
+<!--nosearch-->
+<div class="demo" data-title="Typing a slash command">
+<div class="demo-stage"><div class="mk"><div class="mk-body"><div class="mk-chat">
+<div class="mk-msg"><div class="av">M</div><div><div class="nm">Captain Mira</div><div class="tx">“Storm's coming. Hold on.”</div></div></div>
+<div class="mk-msg js-sys" data-hide style="justify-content:center;background:var(--black50a)"><div class="tx"><i class="fa-solid fa-feather"></i> <em>Thunder rolls across the sky.</em></div></div>
+<div class="mk-drawer center js-ac" data-hide style="bottom:44px;top:auto;width:300px"><div class="row"><b>/sys</b><span class="nimo-muted">add a narrator message</span></div><div class="row"><b>/sendas</b><span class="nimo-muted">send as a character</span></div><div class="row"><b>/trigger</b><span class="nimo-muted">make the AI reply</span></div></div>
+</div></div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"Type a slash in the message box: the command list pops up.","at":".js-input","act":"type","text":"/","show":[".js-ac"]},
+ {"say":"Continue typing the command and its text.","act":"type","into":".js-input","text":"/sys Thunder rolls across the sky.","hide":[".js-ac"]},
+ {"say":"Press Enter. The narrator line appears, with no AI call and no cost.","at":".js-send","act":"click","set":{".js-input":""},"show":[".js-sys"],"wait":1800}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Commands worth knowing</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>/help</code></td><td>Shows help and the list of available commands and macros.</td></tr>
+<tr><td><code>/sys text</code></td><td>Posts a narrator/system message (not sent as a character).</td></tr>
+<tr><td><code>/sendas name=Mira text</code></td><td>Posts a message as a specific character, without calling the AI.</td></tr>
+<tr><td><code>/trigger</code></td><td>Asks the AI to write the next reply (useful in groups).</td></tr>
+<tr><td><code>/continue</code></td><td>Continues the last message.</td></tr>
+<tr><td><code>/impersonate</code></td><td>The AI writes your next message.</td></tr>
+<tr><td><code>/hide 3-5</code> / <code>/unhide 3-5</code></td><td>Hide or restore a range of messages from the AI.</td></tr>
+<tr><td><code>/cut 4</code> / <code>/del 2</code></td><td>Remove messages by number.</td></tr>
+<tr><td><code>/gen prompt</code></td><td>Generates text from a prompt without adding it to the chat; returns it to a script.</td></tr>
+<tr><td><code>/roll 2d6</code></td><td>Rolls dice.</td></tr>
+<tr><td><code>/echo text</code></td><td>Shows a pop-up message to you only.</td></tr>
+<tr><td><code>/setvar key=name value</code> / <code>/getvar name</code></td><td>Stores and reads a variable for scripting.</td></tr>
+</table></div>
+<div class="callout note"><i class="fa-solid fa-circle-info"></i><div><p>Available commands grow with SillyTavern versions. Use <code>/help</code> in the tavern for the authoritative list for the version you're running.</p></div></div>
+
+<h2>Chaining and scripting (STscript)</h2>
+<p>Commands can be chained with <code>|</code> and their output passed along. Quick Replies can hold whole scripts:</p>
+<pre><code>/roll 1d20 | /sys You rolled a {{pipe}}!</code></pre>
+<p>STscript also has conditions (<code>/if</code>), loops, variables and user input prompts, enough to build small games. Each command's own help (<code>/help &lt;command&gt;</code>) shows its arguments.</p>
+
+<h2>Macros</h2>
+<p>Macros are <code>{{placeholders}}</code> you can write inside cards, lorebook entries, system prompts and even messages. They're replaced just before sending.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Macro</th><th>Becomes</th></tr>
+<tr><td><code>{{user}}</code></td><td>Your persona's name.</td></tr>
+<tr><td><code>{{char}}</code></td><td>The current character's name.</td></tr>
+<tr><td><code>{{time}}</code> <code>{{date}}</code> <code>{{weekday}}</code></td><td>Your current local time, date and weekday.</td></tr>
+<tr><td><code>{{random:a,b,c}}</code></td><td>One of the listed options, picked at random each time.</td></tr>
+<tr><td><code>{{roll:1d6}}</code></td><td>A dice roll result.</td></tr>
+<tr><td><code>{{lastMessage}}</code></td><td>Text of the last chat message.</td></tr>
+<tr><td><code>{{setvar::name::value}}</code> <code>{{getvar::name}}</code></td><td>Set and read a variable inside text.</td></tr>
+<tr><td><code>{{newline}}</code> <code>{{trim}}</code></td><td>Formatting helpers.</td></tr>
+<tr><td><code>{{// note}}</code></td><td>A comment that's removed before sending.</td></tr>
+</table></div>
+<p>Example in a character description: <code>{{char}} is in a {{random:grumpy,cheerful,sleepy}} mood today, and it is {{weekday}}.</code></p>

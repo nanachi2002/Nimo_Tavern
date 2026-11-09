@@ -1,0 +1,120 @@
+<!--TITLE Connect an AI (API setup) -->
+<!--ICON fa-solid fa-plug -->
+<!--GROUP Connect & chat -->
+<!--DESC Step by step: get an API key, add an endpoint, pick a model. OpenRouter, OpenAI, Claude, Gemini, DeepSeek, and models running on your own PC. -->
+<p>SillyTavern is only the <i>interface</i>. To get replies it needs to talk to an AI model through an <b>API</b>. Think of it like this: the provider (OpenRouter, OpenAI…) runs the brain, you rent it with a secret <b>API key</b>, and the tavern sends your conversation to it.</p>
+
+<h2>The five words you need</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Word</th><th>Meaning</th></tr>
+<tr><td><b>Provider</b></td><td>The company or program running the AI: OpenRouter, OpenAI, Anthropic, Google, DeepSeek, or your own PC.</td></tr>
+<tr><td><b>API key</b></td><td>A long secret password that lets you use the provider (and be billed by it). Treat it like a credit card number.</td></tr>
+<tr><td><b>Endpoint / URL</b></td><td>The web address SillyTavern sends requests to. Official providers have a built-in one; for your own server you type it in.</td></tr>
+<tr><td><b>Model</b></td><td>The specific AI you want to use from that provider (some are cheap and fast, some are smart and expensive).</td></tr>
+<tr><td><b>Token</b></td><td>A piece of a word (about ¾ of a word). Providers charge per token, and every model has a maximum number it can read at once.</td></tr>
+</table></div>
+
+<h2>Chat Completion vs Text Completion</h2>
+<p>In the <i class="fa-solid fa-plug"></i> panel you first choose an <b>API type</b>:</p>
+<ul>
+    <li><b>Chat Completion</b>: for modern hosted models (OpenAI, Claude, Gemini, DeepSeek, OpenRouter…) and anything "OpenAI-compatible". The provider handles the formatting. <span class="badge ok">Start here</span></li>
+    <li><b>Text Completion</b>: for local or self-hosted engines (KoboldCpp, Ollama, text-generation-webui, vLLM…) where SillyTavern builds the raw text prompt itself using the <a href="/wiki/prompt">instruct template</a>.</li>
+    <li><b>Others</b> (KoboldAI classic, NovelAI, AI Horde…) exist but are niche.</li>
+</ul>
+
+<h2>Walkthrough: OpenRouter</h2>
+<p><b>OpenRouter</b> is the easiest first choice: one account and one key give you hundreds of models (several are free), and you pay only for what you use.</p>
+<ol class="steps">
+    <li><b>Get a key</b> Sign up at <code>openrouter.ai</code>, open <i>Keys</i> and create one. Copy it right away; you can't view it again. Add a small amount of credit if you want paid models, and consider setting a spending limit on the key.</li>
+    <li><b>Open API Connections</b> Click the <i class="fa-solid fa-plug"></i> plug icon.</li>
+    <li><b>Choose Chat Completion, then the source OpenRouter</b></li>
+    <li><b>Paste your key</b> Click Connect (or press Enter). The status dot turns green when the key is accepted.</li>
+    <li><b>Pick a model</b> Use the Model list. Free models say "free" in the name; the list also shows context length and price.</li>
+</ol>
+
+<!--nosearch-->
+<div class="demo tall" data-title="Connecting OpenRouter">
+<div class="demo-stage"><div class="mk">
+{{include:topbar}}
+<div class="mk-body">
+    <div class="mk-drawer left wide js-drawer" data-hide>
+        <h5><i class="fa-solid fa-plug"></i> API Connections</h5>
+        <label>API <div class="text_pole fake-select js-type">Select…</div></label>
+        <label class="js-srcrow" data-hide>Chat Completion Source <div class="text_pole fake-select js-src">Select…</div></label>
+        <label class="js-keyrow" data-hide>OpenRouter API Key <div class="row"><div class="text_pole js-key masked" style="flex:1"></div><div class="menu_button js-connect"><i class="fa-solid fa-plug"></i> Connect</div></div></label>
+        <div class="status js-status"><i></i><span>Not connected</span></div>
+        <label class="js-modelrow" data-hide>Model <div class="text_pole fake-select js-model">Choose a model…</div></label>
+    </div>
+    <div class="mk-toast js-toast" data-hide><i class="fa-solid fa-circle-check"></i> API connection successful!</div>
+    <div class="mk-chat"><div class="mk-file"><i class="fa-solid fa-plug-circle-xmark" style="font-size:26px"></i><br>Not connected to an AI yet</div></div>
+</div>
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"Click the plug icon to open API Connections.","at":".js-api","act":"click","show":[".js-drawer"]},
+ {"say":"Choose the API type: Chat Completion.","at":".js-type","act":"click","set":{".js-type":"Chat Completion"},"show":[".js-srcrow"]},
+ {"say":"Choose the source: OpenRouter.","at":".js-src","act":"click","set":{".js-src":"OpenRouter"},"show":[".js-keyrow"]},
+ {"say":"Paste your API key. It is hidden as you type, and stored encrypted in your tavern.","at":".js-key","act":"type","text":"sk-or-v1-9f3a1c7e52b8d4","mask":true},
+ {"say":"Click Connect. SillyTavern asks the provider if the key is valid.","at":".js-connect","act":"click","add":{".js-status":"ok"},"set":{".js-status span":"Valid"},"show":[".js-toast",".js-modelrow"]},
+ {"say":"The dot is green. Now pick a model from the list.","at":".js-model","act":"click","set":{".js-model":"google/gemini-flash (example)"},"hide":[".js-toast"]},
+ {"say":"You're connected. Close the panel and chat!","at":".js-api","act":"click","hide":[".js-drawer"],"wait":1600}
+]</script></div>
+<!--/nosearch-->
+
+<div class="callout secure"><i class="fa-solid fa-key"></i><div><strong class="t">Where does my key go?</strong>
+<p>Your key is saved <b>encrypted</b> with your other settings, so the NimoTavern server can't read it. When you chat, your browser sends the request <b>straight to the provider</b>; the key never passes through NimoTavern (unless you enable the optional relay, see below).</p></div></div>
+
+<h2>Provider cheat sheet</h2>
+<div class="tabs">
+<div class="tab" data-label="OpenRouter"><p><b>Type:</b> Chat Completion → <b>OpenRouter</b>. Key from <code>openrouter.ai/keys</code>. Best for trying many models with one key; has free models and "auto" routing.</p></div>
+<div class="tab" data-label="OpenAI"><p><b>Type:</b> Chat Completion → <b>OpenAI</b>. Key from <code>platform.openai.com</code> (API keys page). Billing is separate from a ChatGPT subscription: you need API credit.</p></div>
+<div class="tab" data-label="Claude"><p><b>Type:</b> Chat Completion → <b>Claude</b>. Key from the Anthropic Console (<code>console.anthropic.com</code>). Great at long, nuanced roleplay; needs prepaid credit.</p></div>
+<div class="tab" data-label="Gemini"><p><b>Type:</b> Chat Completion → <b>Google AI Studio</b>. Key from <code>aistudio.google.com</code> (Get API key). Has a free tier with rate limits and very long context.</p></div>
+<div class="tab" data-label="DeepSeek"><p><b>Type:</b> Chat Completion → <b>DeepSeek</b>. Key from <code>platform.deepseek.com</code>. Very cheap per token.</p></div>
+<div class="tab" data-label="Your own server"><p><b>Type:</b> Chat Completion → <b>Custom (OpenAI-compatible)</b> and enter the server URL, or Text Completion with the matching engine (KoboldCpp, Ollama…). See the local models section below.</p></div>
+</div>
+
+<div class="callout note"><i class="fa-solid fa-circle-info"></i><div><p>Model names, prices and free tiers change often. Always check the provider's own page for current details. The steps above (type → source → key → connect → model) stay the same.</p></div></div>
+
+<h2>Custom endpoint (any OpenAI-compatible server)</h2>
+<ol class="steps">
+    <li><b>Choose Chat Completion → Custom (OpenAI-compatible)</b></li>
+    <li><b>Enter the base URL</b> For example <code>https://my-server.example.com/v1</code>. It usually ends with <code>/v1</code>.</li>
+    <li><b>Enter the key</b> (some local servers accept anything, like <code>none</code>).</li>
+    <li><b>Enter the model ID</b> exactly as the server names it, or pick it from the list after connecting.</li>
+</ol>
+
+<h2>Running a model on your own PC</h2>
+<p>You can use a model on your own computer, free and fully private. Because NimoTavern runs <i>in your browser</i>, it can reach servers on <b>the same device</b> at <code>http://localhost</code> or <code>http://127.0.0.1</code>.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Program</th><th>API type</th><th>Typical URL</th><th>Note</th></tr>
+<tr><td>KoboldCpp</td><td>Text Completion → KoboldCpp</td><td><code>http://localhost:5001</code></td><td>Allows browser access by default.</td></tr>
+<tr><td>LM Studio</td><td>Chat Completion → Custom</td><td><code>http://localhost:1234/v1</code></td><td>Turn on "Enable CORS" in its server settings.</td></tr>
+<tr><td>Ollama</td><td>Text Completion → Ollama</td><td><code>http://localhost:11434</code></td><td>Allow this site via the <code>OLLAMA_ORIGINS</code> setting.</td></tr>
+<tr><td>text-generation-webui</td><td>Text Completion → Generic / Oobabooga</td><td><code>http://127.0.0.1:5000</code></td><td>Start it with its API (and CORS) option enabled.</td></tr>
+</table></div>
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Phones and other PCs</strong>
+<p><code>localhost</code> means "this very device", so a phone can't reach a model running on your PC. Plain <code>http://192.168.x.x</code> addresses are blocked by browsers on secure pages ("mixed content"). To use a home server from your phone, give it an HTTPS address (for example through a tunnel service) and use that as the URL.</p></div></div>
+
+<h2>The optional relay</h2>
+<p>Some providers refuse requests that come straight from a web page (a browser rule called <b>CORS</b>). If you see "Failed to fetch" or a CORS error, open <b>Account → Relay</b>:</p>
+<ul>
+    <li><b>Fallback mode:</b> try direct first, use the relay only if the provider blocks it.</li>
+    <li><b>Always:</b> every request goes through the relay, which also hides your IP address from the provider.</li>
+</ul>
+<div class="callout warn"><i class="fa-solid fa-user-shield"></i><div><strong class="t">The trade-off</strong>
+<p>With the relay on, that request (prompt and key) travels through the NimoTavern server's memory. It isn't logged or stored, but you must trust the server for that moment. It's <b>off by default</b>, and local models can never use it (the server can't see your PC).</p></div></div>
+
+<h2>Troubleshooting connections</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>You see</th><th>Likely cause and fix</th></tr>
+<tr><td><b>401 / Unauthorized / Invalid key</b></td><td>Key typed wrong, expired, or for another provider. Paste it again with no spaces.</td></tr>
+<tr><td><b>402 / Insufficient credits / quota</b></td><td>No balance on the provider. Add credit or pick a free model.</td></tr>
+<tr><td><b>429 / Rate limit</b></td><td>Too many requests too fast, or a free-tier cap. Wait a minute or switch model.</td></tr>
+<tr><td><b>Failed to fetch / CORS error</b></td><td>The provider or your local server blocks browser requests. For hosted providers use the relay; for local servers enable CORS as in the table above.</td></tr>
+<tr><td><b>Model not found</b></td><td>The model ID changed or isn't on your plan. Re-pick it from the list.</td></tr>
+<tr><td><b>Context length exceeded</b></td><td>Lower <i>Context Size</i> in <a href="/wiki/presets">AI Response Configuration</a> to the model's real limit.</td></tr>
+<tr><td><b>Replies cut off mid-sentence</b></td><td>Raise <i>Response Length</i> or enable "Trim incomplete sentences".</td></tr>
+</table></div>
+
+<div class="callout tip"><i class="fa-solid fa-piggy-bank"></i><div><strong class="t">Keep costs under control</strong>
+<p>Create a separate key for the tavern and set a monthly limit on the provider's dashboard. Long chats cost more per message because the whole history is re-sent each time; see <a href="/wiki/prompt">context</a>.</p></div></div>

@@ -517,6 +517,15 @@ app.get('/', wrap(async (req, res) => {
 }));
 app.get('/index.html', (_req, res) => res.redirect('/'));
 for (const p of ['login', 'register', 'recover', 'account', 'privacy', 'home']) app.get('/' + p, (_req, res) => sendPage(res, p + '.html'));
+// Wiki (public, static, built from nimo/web/wiki)
+app.get('/wiki', (_req, res) => sendPage(res, 'wiki/index.html'));
+app.get('/wiki/search.json', (_req, res) => { res.setHeader('Cache-Control', 'public, max-age=300'); res.type('json').sendFile(path.join(NIMO_PAGES, 'wiki/search.json')); });
+app.get('/wiki/:slug', (req, res, next) => {
+    const slug = req.params.slug.replace(/\.html$/, '');
+    if (!/^[a-z0-9-]{1,60}$/.test(slug) || !fs.existsSync(path.join(NIMO_PAGES, 'wiki', slug + '.html'))) return next();
+    if (slug === 'index') return res.redirect('/wiki');
+    sendPage(res, 'wiki/' + slug + '.html');
+});
 app.get('/source', (_req, res) => res.redirect(CFG.sourceUrl));
 app.get('/nimo-sw.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');

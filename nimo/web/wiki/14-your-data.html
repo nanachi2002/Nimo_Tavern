@@ -1,0 +1,51 @@
+<!--TITLE Your data, sync & backups -->
+<!--ICON fa-solid fa-box-archive -->
+<!--GROUP Privacy & your data -->
+<!--DESC Where your characters and chats live, how they sync between devices, how much space you have, and how to back up or move out. -->
+<h2>Where your data lives</h2>
+<p>In a normal SillyTavern, your data is a folder on a computer. In NimoTavern it lives in <b>two places</b>, both encrypted:</p>
+<ol class="steps">
+    <li><b>Your browser</b> keeps an encrypted local copy (so the tavern opens in under a second and works with a flaky connection). It's unlocked with keys that only exist on your device.</li>
+    <li><b>The server</b> keeps an encrypted copy so your data follows you to other devices. It holds unreadable blobs; it has no key to open them.</li>
+</ol>
+<p>When you save a character, send a message or change a setting, your browser encrypts the changed files and uploads them in the background. The little <i class="fa-solid fa-cloud-arrow-up"></i> indicator in the corner shows pending uploads.</p>
+
+<h2>Using several devices</h2>
+<ol class="steps">
+    <li><b>Log in on the new device</b> with the same username and password.</li>
+    <li><b>Wait for the first download.</b> The encrypted data comes down and is unlocked locally. This takes seconds for small accounts, longer for big ones (hundreds of MB of chats and images).</li>
+    <li><b>Keep using it.</b> Changes sync both ways. After the first load, the tavern starts from the local cache and only fetches what changed.</li>
+</ol>
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Two devices at the same time</strong>
+<p>Sync is per file and "last write wins". If you edit the <i>same chat</i> on two devices at once, one version will overwrite the other. Finish on one device, wait for the upload indicator to clear, then switch.</p></div></div>
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Before closing the tab</strong>
+<p>If uploads are still pending, your browser warns you before you leave. Let it finish: until then the newest changes exist only on that device.</p></div></div>
+
+<h2>Storage space</h2>
+<p>Each account has a storage quota (1 GB by default), shown with a bar at the top of your <a href="/wiki/account">Account page</a>. Text compresses well, so chats are small; <b>images</b> (character PNGs, backgrounds, avatars) take most of the space. Free space by deleting unused characters and chats, or large uploaded backgrounds.</p>
+
+<h2>Backups and leaving</h2>
+<p>You are never locked in. Under <b>Account → Your data → Export decrypted backup (.zip)</b> your browser decrypts everything and builds a zip using SillyTavern's own folder layout (characters, chats, worlds, settings, personas…). You can unzip it into a local SillyTavern's <code>data/default-user</code> folder.</p>
+<div class="callout danger"><i class="fa-solid fa-user-secret"></i><div><strong class="t">The backup is NOT encrypted</strong>
+<p>It contains your chats <i>and</i> your API keys in plain form. Store it somewhere safe (an encrypted drive or password manager vault) and delete copies you no longer need.</p></div></div>
+
+<h2>Importing things in</h2>
+<ul>
+    <li><b>Characters, chats, lorebooks, presets, themes, personas</b>: use the import buttons in each SillyTavern panel; they work exactly as in normal SillyTavern.</li>
+    <li><b>Whole-account zip import:</b> not available yet. Individual imports are the way for now.</li>
+    <li><b>Moved from the old SillyTavern server?</b> Your account was prepared in advance: log in with your old username and password and your data is encrypted and imported automatically, see <a href="/wiki/troubleshooting#migration">Troubleshooting</a>.</li>
+</ul>
+
+<h2>Logging out</h2>
+<p>Logging out <b>wipes the local copy and the keys from that device</b>. Your data is safe on the server (encrypted), and logging in again re-downloads it. Always log out on shared or public computers. If you can't (lost phone, forgotten session), use <b>Log out everywhere</b> on the Account page to end all sessions at once.</p>
+<p>Changing to a different account on the same browser also wipes the previous user's local data first.</p>
+
+<h2>What happens if…</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Situation</th><th>Result</th></tr>
+<tr><td>You clear your browser's site data while logged in</td><td>Local copy and keys vanish. Log in again; nothing is lost on the server.</td></tr>
+<tr><td>You go offline</td><td>You keep chatting if your AI provider is reachable (or a local model). Changes upload when you're back online.</td></tr>
+<tr><td>The server goes down</td><td>Your local copy keeps working; sync resumes later.</td></tr>
+<tr><td>You forget your password but have the recovery phrase</td><td>You can set a new password with it, <a href="/wiki/account#forgot-your-password">see here</a>.</td></tr>
+<tr><td>You lose both password and recovery phrase</td><td>The data cannot be recovered by anyone. That's the cost of true privacy.</td></tr>
+</table></div>

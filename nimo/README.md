@@ -62,3 +62,13 @@ Server env (`/etc/nimotavern.env`): `NIMO_SECRET`, `DATABASE_URL`, `PORT`, `COOK
 
 NimoTavern does not modify SillyTavern's code; it bundles it. Merge upstream `release`, rebuild, and run
 the E2E checks. Build-time patches (see `nimo/build.mjs`) fail loudly if their target code changed.
+
+## Wiki
+
+`/wiki` is a public, static wiki (21 pages) with animated demos and live widgets. Pages are fragments in
+`nimo/web/wiki/NN-slug.html` (front matter comments `TITLE`, `ICON`, `GROUP`, `DESC`; `{{include:name}}` pulls
+from `web/wiki/_partials`). `nimo/build-wiki.mjs` wraps them in `web/wiki-layout.html`, adds heading anchors, the
+sidebar, prev/next links and `search.json`. Client code (demo player, sampler/context/lorebook/cipher widgets,
+search) is `web/js/wiki.js`; styles are `web/static/css/wiki.css`, built on SillyTavern's theme variables.
+Demos are `<div class="demo">` with a `<script type="application/json" class="steps">` list of steps
+(`at`, `act`, `show`, `hide`, `set`, `say`...). The tavern's Account area gets a Wiki button from `web/js/boot.js`.

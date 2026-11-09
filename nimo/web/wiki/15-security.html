@@ -1,0 +1,83 @@
+<!--TITLE How NimoTavern keeps you private -->
+<!--ICON fa-solid fa-shield-halved -->
+<!--GROUP Privacy & your data -->
+<!--DESC The plain-language version: what the server can and can't see, who could read your chats, and where the honest limits are. -->
+<p>NimoTavern was built with one rule: <b>the person running the server must not be able to read your chats, characters or API keys, even if they wanted to.</b> Not "we promise not to look". <i>Can't.</i> This page explains how, in plain language. The <a href="/wiki/crypto">technical page</a> has the cryptography details and <a href="/wiki/verify">Verify it yourself</a> shows how to check these claims in your own browser.</p>
+
+<h2>The big idea</h2>
+<p>Normal websites store your data in a form they can read, and protect it with their own promises. NimoTavern flips that: <b>your browser locks your data before it leaves your device</b>, using a key made from your password. The server only ever receives the locked box.</p>
+
+<div class="flow3">
+    <div class="node you"><i class="fa-solid fa-lock-open"></i><b>Your device</b><br>plaintext + your key</div>
+    <div class="wire"></div>
+    <div class="node"><i class="fa-solid fa-user-lock"></i><b>Encrypted in the browser</b><br>AES-256-GCM</div>
+    <div class="wire"></div>
+    <div class="node srv"><i class="fa-solid fa-database"></i><b>Server</b><br>random-looking bytes</div>
+</div>
+
+<h2>Try it</h2>
+<p>This runs real AES-256-GCM, right now, in your browser. Type something. Notice the output changes completely every time (random IV), and that changing a single bit makes decryption fail.</p>
+<!--nosearch-->
+<div class="widget" data-widget="cipher"></div>
+<!--/nosearch-->
+
+<h2>You vs. the database</h2>
+<p>Here's what your tavern contains compared to what the database holds for it. File names, folders and sizes of text are hidden too: even the <i>names</i> are replaced by a keyed hash.</p>
+<!--nosearch-->
+<div class="widget" data-widget="serverview"></div>
+<!--/nosearch-->
+
+<h2>Where your password fits in</h2>
+<p>Your password never leaves your browser. It's stretched (with a deliberately slow, memory-hungry function called Argon2id) into two separate values:</p>
+<ul>
+    <li><b>A login proof:</b> proves to the server that you know the password, without revealing it. The server stores only a hash of this proof.</li>
+    <li><b>An unlock key:</b> opens a box containing your random <b>data key</b>. That box is stored on the server, but only <i>you</i> can open it.</li>
+</ul>
+<div class="keytree">
+    <div class="k local">Your password<small>stays in your browser</small></div><div class="down">↓ Argon2id + HKDF</div>
+    <div class="lvl"><div class="k local">Unlock key<small>never sent</small></div><div class="k server">Login proof<small>sent, server hashes it again</small></div></div>
+    <div class="down">↓ opens</div>
+    <div class="k local">Data key (256-bit, random)<small>stored on the server only inside a locked box</small></div><div class="down">↓ encrypts</div>
+    <div class="k">Your chats, characters, settings, API keys<small>stored as encrypted blobs</small></div>
+</div>
+<p>Your 12-word <b>recovery phrase</b> is a second, independent way to open the same data key box. That's why it can reset your password without the server's help.</p>
+
+<h2>Who can see what?</h2>
+<div class="wk-tablewrap"><table>
+<tr><th></th><th>Your chats &amp; characters</th><th>Your API keys</th><th>Your password</th><th>Metadata*</th></tr>
+<tr><td><b>You</b></td><td><span class="badge ok">Yes</span></td><td><span class="badge ok">Yes</span></td><td><span class="badge ok">Yes</span></td><td>Yes</td></tr>
+<tr><td><b>NimoTavern server / admin</b></td><td><span class="badge no">No</span></td><td><span class="badge no">No</span></td><td><span class="badge no">No</span></td><td>Partly</td></tr>
+<tr><td><b>Someone who steals the database</b></td><td><span class="badge no">No</span></td><td><span class="badge no">No</span></td><td><span class="badge no">No (only hashes)</span></td><td>Partly</td></tr>
+<tr><td><b>Other NimoTavern users</b></td><td><span class="badge no">No</span></td><td><span class="badge no">No</span></td><td><span class="badge no">No</span></td><td>No</td></tr>
+<tr><td><b>Your AI provider</b></td><td><span class="badge warn">The prompts you send</span></td><td><span class="badge warn">The key you gave it</span></td><td><span class="badge no">No</span></td><td>Yes</td></tr>
+</table></div>
+<p class="nimo-muted">*Metadata: that an account exists, roughly when it's active, how many encrypted blobs it has and their sizes. Never their contents or names.</p>
+
+<h2>What else NimoTavern does for privacy</h2>
+<ul>
+    <li><b>No email, no phone, no real name.</b> A username and a password are enough.</li>
+    <li><b>Provider requests go straight from your browser</b> to the provider. Prompts and keys don't pass through NimoTavern by default.</li>
+    <li><b>No access logs, no analytics, no ads, no trackers.</b> The only third-party script is the Cloudflare Turnstile captcha on the sign-up page, which is there to stop bots.</li>
+    <li><b>IP addresses are not stored.</b> They're kept in memory for a few minutes as salted hashes for rate limiting, then forgotten.</li>
+    <li><b>Strict browser protections:</b> HTTPS only (with HSTS), a tight Content-Security-Policy that limits which servers the page can talk to, HttpOnly session cookies, no referrer leaks.</li>
+    <li><b>Open source (AGPL-3.0).</b> Anyone can read the code and build their own copy.</li>
+    <li><b>You can take everything with you</b> at any time, see <a href="/wiki/your-data">Your data</a>.</li>
+</ul>
+
+<h2>The honest limits</h2>
+<p>No system is magic. Here's exactly what encryption does <b>not</b> protect against:</p>
+<div class="callout warn"><i class="fa-solid fa-code"></i><div><strong class="t">You trust the code you're served</strong>
+<p>This is a web app: your browser downloads its JavaScript from the server each visit (with caching). A malicious operator <i>could</i> in theory publish modified code that steals keys. That's true of every web-based encrypted service. The defenses: the code is open source, the page is built from public source, and you can <a href="/wiki/verify">verify what's running</a>. If you need zero trust in the host, run SillyTavern locally.</p></div></div>
+<div class="callout warn"><i class="fa-solid fa-brain"></i><div><strong class="t">Your AI provider reads your prompts</strong>
+<p>Encryption protects your data at rest and from NimoTavern. When you chat, the provider you chose receives the conversation, otherwise it couldn't answer. Choose one whose policy you trust, or use a local model.</p></div></div>
+<div class="callout warn"><i class="fa-solid fa-laptop"></i><div><strong class="t">Your device is part of the security</strong>
+<p>While you're logged in, your keys are on your device (stored as non-exportable browser keys). Malware, a shared computer, or a stolen unlocked phone can expose them. Log out on shared devices and use a device lock.</p></div></div>
+<div class="callout warn"><i class="fa-solid fa-cloud"></i><div><strong class="t">Network infrastructure</strong>
+<p>NimoTavern sits behind Cloudflare for protection and speed. Like any such service, Cloudflare handles the encrypted connection and can see connection metadata (IP address, timing, request sizes). Because your data is encrypted <i>before</i> it's sent, what passes through is ciphertext.</p></div></div>
+<div class="callout warn"><i class="fa-solid fa-key"></i><div><strong class="t">A weak password is a weak lock</strong>
+<p>If someone obtains the encrypted data and then guesses your password offline, they could open it. Argon2id makes each guess slow and expensive, but a short or common password is still guessable. Use a long passphrase.</p></div></div>
+<div class="callout danger"><i class="fa-solid fa-ban"></i><div><strong class="t">No password reset, by design</strong>
+<p>If you lose both your password and your 12-word recovery phrase, nobody can help you, including the admin. That's not a limitation we could "fix": it's the proof that we can't read your data.</p></div></div>
+
+<h2>Who is this for?</h2>
+<p>NimoTavern fits people who want a convenient hosted tavern <i>and</i> don't want the host to read their private roleplay, personas and keys. It sharply reduces what a hosted service can learn, and it protects you if the server is ever breached. For maximum assurance, verify the code yourself, or run SillyTavern on your own machine.</p>

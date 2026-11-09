@@ -1,0 +1,64 @@
+<!--TITLE Interface tour -->
+<!--ICON fa-solid fa-map -->
+<!--GROUP Start -->
+<!--DESC What every icon in the top bar opens, and where the settings you're looking for actually live. -->
+<p>SillyTavern hides almost everything behind the icons of the top bar. Once you know the nine of them, you know where everything is. <b>Click an icon in the mock-up below</b> to see what it does.</p>
+
+<!--nosearch-->
+<div class="widget" data-widget="tour" style="padding:0;overflow:hidden">
+<div class="demo-stage" style="min-height:0"><div class="mk" style="min-height:0">
+<div class="mk-top">
+<div class="ico" data-icon="fa-solid fa-sliders" data-tip="AI Response Configuration" data-info="<p>How the AI writes: <b>creativity (temperature)</b>, response length, context size, repetition penalties. Also holds your <b>presets</b>.</p>" data-link="/wiki/presets"><i class="fa-solid fa-sliders"></i></div>
+<div class="ico" data-icon="fa-solid fa-plug" data-tip="API Connections" data-info="<p>Where you pick the AI provider and paste your API key. <b>Nothing works until you connect here.</b> The dot turns green when connected.</p>" data-link="/wiki/connect-ai"><i class="fa-solid fa-plug"></i></div>
+<div class="ico" data-icon="fa-solid fa-font" data-tip="Advanced Formatting" data-info="<p>The exact text template wrapped around your chat before it's sent: system prompt, instruct format, story string. Powerful, but the defaults are usually right.</p>" data-link="/wiki/prompt"><i class="fa-solid fa-font"></i></div>
+<div class="ico" data-icon="fa-solid fa-book-atlas" data-tip="World Info" data-info="<p>Lorebooks: facts about your world that are injected into the prompt only when relevant keywords appear. The AI's long-term memory for lore.</p>" data-link="/wiki/world-info"><i class="fa-solid fa-book-atlas"></i></div>
+<div class="ico" data-icon="fa-solid fa-user-gear" data-tip="User Settings" data-info="<p>The interface itself: themes, chat style, avatars, fonts, sounds, language. Also home of <b>Account</b>, <b>Logout</b> and the <b>Wiki</b> button in NimoTavern.</p>" data-link="/wiki/themes"><i class="fa-solid fa-user-gear"></i></div>
+<div class="ico" data-icon="fa-solid fa-panorama" data-tip="Backgrounds" data-info="<p>The picture behind the chat. Pick one of the included scenes or upload your own, per chat if you like.</p>" data-link="/wiki/themes"><i class="fa-solid fa-panorama"></i></div>
+<div class="ico" data-icon="fa-solid fa-cubes" data-tip="Extensions" data-info="<p>Add-ons: summaries, expression sprites, Quick Replies, regex scripts, image generation, text-to-speech, translation and more.</p>" data-link="/wiki/extensions"><i class="fa-solid fa-cubes"></i></div>
+<div class="ico" data-icon="fa-solid fa-face-smile" data-tip="Persona Management" data-info="<p>Who <b>you</b> are in the story: your name, avatar and description. Switch personas per character or per chat.</p>" data-link="/wiki/personas"><i class="fa-solid fa-face-smile"></i></div>
+<div class="sp"></div>
+<div class="ico" data-icon="fa-solid fa-address-card" data-tip="Character Management" data-info="<p>Your library of character cards, plus the editor for the selected character. Import, create, edit, tag, group.</p>" data-link="/wiki/characters"><i class="fa-solid fa-address-card"></i></div>
+</div>
+<div class="tour-info" style="padding:14px 18px;min-height:96px;background-color:var(--SmartThemeBlurTintColor);line-height:1.55;text-align:left"></div>
+</div></div></div>
+<!--/nosearch-->
+
+<h2>The bottom bar</h2>
+<p>Under the chat you'll find the message box and a few controls:</p>
+<ul>
+    <li><i class="fa-solid fa-bars"></i> <b>Options menu</b> (left): regenerate, continue, impersonate, start a new chat, manage chat files, attach files, close the chat.</li>
+    <li><i class="fa-solid fa-wand-magic-sparkles"></i> <b>Extensions menu</b> (the magic wand, if your version shows it): quick access to extension actions such as image generation.</li>
+    <li><i class="fa-solid fa-paper-plane"></i> <b>Send</b>: sends the message. It turns into a <i class="fa-solid fa-stop"></i> <b>Stop</b> button while the AI is writing.</li>
+</ul>
+
+<h2>The anatomy of a message</h2>
+<p>Hover a message to see its action icons. Messages have a few parts worth knowing:</p>
+
+<!--nosearch-->
+<div class="demo" data-title="Message anatomy">
+<div class="demo-stage"><div class="mk"><div class="mk-body"><div class="mk-chat">
+<div class="mk-msg js-m"><div class="av">S</div><div style="flex:1"><div class="nm">Seraphina <span class="nimo-muted" style="font-weight:400;font-size:11px">· #3 · 21:14</span></div><div class="tx">The lantern flickers. <q>“Stay as long as you like.”</q></div><div class="meta">Generated in 4.2s · 187 tokens</div></div>
+<div class="acts js-acts"><i class="fa-solid fa-flag-checkered js-ck"></i><i class="fa-solid fa-ellipsis js-more"></i><i class="fa-solid fa-pencil js-edit"></i></div>
+<div class="swipe js-swipe"><i class="fa-solid fa-chevron-left"></i> 1/3 <i class="fa-solid fa-chevron-right js-right"></i></div></div>
+<div class="mk-drawer center js-menu" data-hide style="top:46px;bottom:auto;width:230px"><h5><i class="fa-solid fa-ellipsis"></i> Message actions</h5><div class="row"><i class="fa-solid fa-eye-slash"></i> Hide message from AI</div><div class="row"><i class="fa-solid fa-copy"></i> Copy</div><div class="row"><i class="fa-solid fa-code-branch"></i> Branch from here</div><div class="row"><i class="fa-solid fa-trash"></i> Delete</div></div>
+</div></div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"Every message shows who wrote it, its number and the time. Under it: how long it took and how many tokens.","at":".nm","act":"none","wait":1800},
+ {"say":"The arrows at the bottom right are SWIPES: alternative replies for the same message. Click to generate another or flip between them.","at":".js-right","act":"click","set":{".swipe":"<i class=\"fa-solid fa-chevron-left\"></i> 2/3 <i class=\"fa-solid fa-chevron-right\"></i>",".tx":"The lantern flickers. <q>“Rest your bones. The stew's still warm.”</q>"}},
+ {"say":"The pencil edits the message text. You can fix or rewrite anything the AI said.","at":".js-edit","act":"click","wait":1400},
+ {"say":"The three dots open more actions: hide from the AI, copy, branch the chat from here, delete…","at":".js-more","act":"click","show":[".js-menu"],"wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Where is… ?</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>I want to…</th><th>Go to</th></tr>
+<tr><td>Change the AI model</td><td><i class="fa-solid fa-plug"></i> API Connections</td></tr>
+<tr><td>Make replies longer / more creative</td><td><i class="fa-solid fa-sliders"></i> AI Response Configuration</td></tr>
+<tr><td>Import a character</td><td><i class="fa-solid fa-address-card"></i> Character Management → import</td></tr>
+<tr><td>Change my name or avatar in chats</td><td><i class="fa-solid fa-face-smile"></i> Persona Management</td></tr>
+<tr><td>Change colors, fonts, chat layout</td><td><i class="fa-solid fa-user-gear"></i> User Settings → UI Theme</td></tr>
+<tr><td>Add world lore</td><td><i class="fa-solid fa-book-atlas"></i> World Info</td></tr>
+<tr><td>Change password, see my recovery options, log out, delete account</td><td><i class="fa-solid fa-user-gear"></i> User Settings → <b>Account</b></td></tr>
+<tr><td>Open this wiki</td><td><i class="fa-solid fa-user-gear"></i> User Settings → <b>Wiki</b> (next to Account)</td></tr>
+</table></div>

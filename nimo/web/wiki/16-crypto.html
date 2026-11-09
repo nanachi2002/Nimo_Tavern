@@ -1,0 +1,119 @@
+<!--TITLE Encryption in detail -->
+<!--ICON fa-solid fa-key -->
+<!--GROUP Privacy & your data -->
+<!--DESC The technical page: algorithms, key hierarchy, exactly what travels between browser and server at sign-up, login, saving and recovery. -->
+<p>This is the engineer's view. If you only want the summary, read <a href="/wiki/security">How NimoTavern keeps you private</a>. Everything below happens <b>in your browser</b> unless the "server" column says otherwise.</p>
+
+<h2>At a glance</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Purpose</th><th>Primitive</th><th>Parameters</th></tr>
+<tr><td>Password stretching</td><td>Argon2id (WebAssembly)</td><td>64 MiB memory, 3 passes, 1 lane, random 128-bit salt per account</td></tr>
+<tr><td>Key separation</td><td>HKDF-SHA-256</td><td>Distinct labels derive the unlock key and the login proof from the same stretched secret</td></tr>
+<tr><td>Data key (DEK)</td><td>Random, 256-bit</td><td>Generated once, in your browser</td></tr>
+<tr><td>Key wrapping</td><td>AES-256-GCM</td><td>DEK wrapped twice: by the password key and by the recovery key</td></tr>
+<tr><td>Recovery phrase</td><td>12 words, BIP-39 wordlist</td><td>128 bits of entropy, stretched like a password</td></tr>
+<tr><td>File encryption</td><td>AES-256-GCM</td><td>Random 96-bit IV per write, 128-bit tag; compress first (deflate) for text</td></tr>
+<tr><td>File names</td><td>HMAC-SHA-256</td><td>Keyed with a separate subkey; output is the blob ID</td></tr>
+<tr><td>Server-side login check</td><td>scrypt</td><td>Server hashes the login proof again, with its own per-user salt</td></tr>
+<tr><td>Sessions</td><td>Random 256-bit token</td><td>Only a hash is stored; HttpOnly + Secure + SameSite cookie, 30-day expiry</td></tr>
+</table></div>
+
+<h2>The key hierarchy</h2>
+<div class="keytree">
+    <div class="k local">Password + username + salt<small>browser only</small></div><div class="down">↓ Argon2id</div>
+    <div class="k local">Stretched secret<small>browser only</small></div><div class="down">↓ HKDF (two labels)</div>
+    <div class="lvl"><div class="k local">KEK<small>unlocks the DEK, never leaves</small></div><div class="k server">Login proof<small>sent to the server; it stores scrypt(proof)</small></div></div>
+    <div class="down">↓ AES-GCM unwrap</div>
+    <div class="k local">DEK (random 256-bit)<small>the root of everything</small></div><div class="down">↓ HKDF (two labels)</div>
+    <div class="lvl"><div class="k local">encKey<small>AES-GCM, files</small></div><div class="k local">idKey<small>HMAC, file names</small></div></div>
+</div>
+<p>The DEK is wiped from memory right after the two working keys are derived. The working keys are imported into the browser's WebCrypto as <b>non-extractable</b> keys: even code running in the page can use them to encrypt and decrypt, but can't read their raw bytes.</p>
+
+<h2>Sign-up, step by step</h2>
+<!--nosearch-->
+<div class="demo" data-title="Registration: who knows what">
+<div class="demo-stage"><div class="mk" style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
+<div class="nimo-glass" style="padding:10px"><b><i class="fa-solid fa-laptop" style="color:#7bd62a"></i> Your browser</b>
+  <div class="js-a1" data-hide style="margin-top:8px"><i class="fa-solid fa-dice"></i> Random <b>salt</b>, random <b>DEK</b></div>
+  <div class="js-a2" data-hide style="margin-top:6px"><i class="fa-solid fa-gears"></i> Argon2id(password) → <b>KEK</b> + <b>login proof</b></div>
+  <div class="js-a3" data-hide style="margin-top:6px"><i class="fa-solid fa-box"></i> AES-GCM(KEK, DEK) → <b>wrapped DEK</b></div>
+  <div class="js-a4" data-hide style="margin-top:6px"><i class="fa-solid fa-list-ol"></i> 12-word phrase → second <b>wrapped DEK</b></div>
+</div>
+<div class="nimo-glass" style="padding:10px"><b><i class="fa-solid fa-server" style="color:#ff7a6b"></i> Server receives</b>
+  <div class="js-b1" data-hide style="margin-top:8px"><i class="fa-solid fa-user"></i> username, salts</div>
+  <div class="js-b2" data-hide style="margin-top:6px"><i class="fa-solid fa-fingerprint"></i> login proof (stores <b>scrypt</b> of it)</div>
+  <div class="js-b3" data-hide style="margin-top:6px"><i class="fa-solid fa-lock"></i> two <b>wrapped DEKs</b> (opaque)</div>
+  <div class="js-b4" data-hide style="margin-top:6px;color:var(--SmartThemeEmColor)"><i class="fa-solid fa-ban"></i> never receives: password, KEK, DEK, phrase</div>
+</div>
+<div class="js-arrow" data-hide style="grid-column:1/3;text-align:center"><div class="flow3" style="grid-template-columns:1fr"><div class="wire" style="width:100%"></div></div></div>
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"1. Your browser generates a random salt and a random 256-bit data key (DEK). Nothing is sent yet.","show":[".js-a1"]},
+ {"say":"2. It stretches your password with Argon2id into an unlock key (KEK) and a separate login proof.","show":[".js-a2"]},
+ {"say":"3. The DEK is locked inside a box that only the KEK opens.","show":[".js-a3"]},
+ {"say":"4. The same DEK is locked a second time using your 12-word recovery phrase.","show":[".js-a4"]},
+ {"say":"5. Only these public or opaque values are uploaded.","show":[".js-arrow",".js-b1",".js-b2",".js-b3"]},
+ {"say":"The server can neither open the boxes nor reverse the proof back into your password.","show":[".js-b4"],"wait":2000}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Login</h2>
+<ol class="steps">
+    <li><b>Ask for parameters.</b> The browser sends only your username; the server returns your public salt and KDF settings. (For unknown usernames it returns a plausible fake salt, so you can't probe which accounts exist.)</li>
+    <li><b>Derive.</b> Argon2id turns your password into the KEK and the login proof.</li>
+    <li><b>Prove.</b> The browser sends the proof. The server checks it against its stored scrypt hash (constant time) and, if it matches, starts a session and returns your <b>wrapped DEK</b>.</li>
+    <li><b>Unlock.</b> The KEK opens the wrapped DEK locally. Working keys are derived and stored in the browser; the DEK is wiped.</li>
+</ol>
+
+<h2>Saving a file</h2>
+<!--nosearch-->
+<div class="demo" data-title="From a message to a stored blob">
+<div class="demo-stage"><div class="mk" style="padding:14px;display:flex;flex-direction:column;gap:8px;justify-content:center">
+<div class="mk-card js-p1"><i class="fa-solid fa-file-lines" style="font-size:20px;color:var(--SmartThemeQuoteColor)"></i><div><b>chats/Seraphina/2026-11-08.jsonl</b><small>plaintext, in your browser's memory</small></div></div>
+<div class="mk-card js-p2" data-hide><i class="fa-solid fa-compress" style="font-size:20px"></i><div><b>Compressed</b><small>deflate, text shrinks a lot</small></div></div>
+<div class="mk-card js-p3" data-hide><i class="fa-solid fa-lock" style="font-size:20px;color:#7bd62a"></i><div><b>Encrypted</b><small>AES-256-GCM, fresh random IV, tag authenticates it</small></div></div>
+<div class="mk-card js-p4" data-hide><i class="fa-solid fa-signature" style="font-size:20px"></i><div><b>Named by HMAC</b><small>id = HMAC(idKey, path). The id is also bound into the encryption (AAD)</small></div></div>
+<div class="mk-card js-p5" data-hide style="border-color:#c0392b"><i class="fa-solid fa-database" style="font-size:20px;color:#ff7a6b"></i><div><b>Uploaded</b><small>server sees: id 3f9c…, 18,412 bytes, sequence number</small></div></div>
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"A chat file changes in your tavern.","at":".js-p1","act":"none","wait":1200},
+ {"say":"Text is compressed first (it's smaller, and less size information leaks).","show":[".js-p2"]},
+ {"say":"Encrypted with AES-256-GCM using a new random IV. The 128-bit tag makes any change detectable.","show":[".js-p3"]},
+ {"say":"The file name is replaced by a keyed hash. Binding the id into the encryption stops the server from swapping blobs between names.","show":[".js-p4"]},
+ {"say":"Only the id and ciphertext are uploaded. The local encrypted cache is updated too.","show":[".js-p5"],"wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Syncing</h2>
+<p>The server keeps a per-account increasing sequence number. Your browser remembers the last number it saw and asks "what changed since N?". The answer is a list of <code>(id, size, seq)</code> entries; the browser fetches new blobs in batches, decrypts them locally and merges. Deletions are recorded as tombstones. Files that are identical to SillyTavern's shared default content (like the built-in Seraphina card) are stored as <i>references</i> instead of copies.</p>
+
+<h2>Recovery and password changes</h2>
+<ul>
+    <li><b>Forgot password:</b> the phrase is stretched into a recovery key and recovery proof. The server verifies the proof and returns the second wrapped DEK. The browser opens it, wraps the DEK under a <i>new</i> password key, and generates a <b>new recovery phrase</b> (the old one is retired).</li>
+    <li><b>Change password:</b> the DEK is re-wrapped under the new password key. Your data isn't re-encrypted, so it's instant, however big your tavern is.</li>
+    <li><b>New recovery phrase:</b> a new recovery wrap replaces the old one. The old phrase stops working.</li>
+    <li><b>Log out everywhere:</b> deletes all session records server-side. Each device's local keys are wiped when it next syncs or logs out.</li>
+</ul>
+
+<h2>What the database contains</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Table</th><th>Columns that matter</th><th>Readable by the operator?</th></tr>
+<tr><td><code>users</code></td><td>username, salts, scrypt(login proof), scrypt(recovery proof), wrapped DEKs, used bytes, quota</td><td>Username and sizes yes; everything else is a hash, salt or ciphertext</td></tr>
+<tr><td><code>sessions</code></td><td>hashed token, user id, expiry</td><td>No raw tokens</td></tr>
+<tr><td><code>blobs</code></td><td>user id, blob id (HMAC), ciphertext, size, sequence number</td><td>Ciphertext only</td></tr>
+</table></div>
+<p>There are no columns for IP address, user agent, email, or plaintext content, and no logs of requests.</p>
+
+<h2>Threat model</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Attacker</th><th>Can they read your data?</th></tr>
+<tr><td>Passive network observer</td><td>No: TLS to Cloudflare and the data is already encrypted inside it.</td></tr>
+<tr><td>Cloudflare (as the TLS endpoint)</td><td>Sees ciphertext and metadata, not plaintext.</td></tr>
+<tr><td>Curious or coerced operator with database access</td><td>No: only ciphertext, hashes and salts.</td></tr>
+<tr><td>Database leak, then offline password guessing</td><td>Possible only for weak passwords; Argon2id makes each guess cost 64 MiB and real time.</td></tr>
+<tr><td>Malicious operator shipping modified JavaScript</td><td><b>Yes, in principle</b>: the web delivery model. Mitigations: open source, reproducible build steps, strict CSP, you can inspect the running code.</td></tr>
+<tr><td>Malware on your device / XSS in the page</td><td>Can use the working keys while you're logged in. Mitigated by CSP and non-extractable keys, but not eliminated.</td></tr>
+<tr><td>Anyone with your recovery phrase</td><td>Yes: treat it like the master key it is.</td></tr>
+</table></div>
+
+<div class="callout secure"><i class="fa-solid fa-magnifying-glass"></i><div><p>Don't take this page's word for it: <a href="/wiki/verify">Verify it yourself</a> walks you through checking the traffic, the stored data and the running code.</p></div></div>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="darkreader-lock">
+    <meta name="referrer" content="no-referrer">
+    <meta name="nimo-v" content="{{V}}">
+    <title>{{TITLE}} · NimoTavern Wiki</title>
+    <meta name="description" content="{{DESC}}">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link href="/webfonts/NotoSans/stylesheet.css" rel="stylesheet">
+    <link href="/webfonts/NotoSansMono/stylesheet.css" rel="stylesheet">
+    <link href="/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/css/solid.min.css" rel="stylesheet">
+    <link href="/css/brands.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/css/st-tailwind.css">
+    <link rel="stylesheet" href="/nimo/css/nimo.css?v={{V}}">
+    <link rel="stylesheet" href="/nimo/css/wiki.css?v={{V}}">
+    <script defer src="/nimo/js/nimo-wiki.js?v={{V}}"></script>
+</head>
+<body class="nimo">
+    <header class="nimo-top">
+        <a class="nimo-brand" href="/wiki"><img src="/img/logo.png" alt=""> NimoTavern <span class="tag">Wiki</span></a>
+        <nav class="nimo-nav">
+            <button class="menu_button wk-burger" id="wk-menu" type="button" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+            <button class="menu_button" id="wk-search-btn" type="button"><i class="fa-solid fa-magnifying-glass"></i> <span class="wk-lbl">Search</span> <kbd class="wk-lbl" style="margin-left:4px">/</kbd></button>
+            <a class="menu_button wk-lbl" href="/privacy">Privacy</a>
+            <a class="menu_button primary" href="/"><i class="fa-solid fa-door-open"></i> <span class="wk-lbl">Open the tavern</span></a>
+        </nav>
+    </header>
+    <div class="wk-shell">
+        <aside class="wk-side" id="wk-side">{{SIDEBAR}}</aside>
+        <div class="wk-main">
+            <article class="wk-article">
+                <div class="wk-crumb"><a href="/wiki">Wiki</a> › {{GROUP}}</div>
+                <h1><i class="{{ICON}}"></i> {{TITLE}}</h1>
+                <p class="wk-desc">{{DESC}}</p>
+                {{BODY}}
+                <nav class="wk-pn">{{PREVNEXT}}</nav>
+            </article>
+            <aside class="wk-toc" id="wk-toc"></aside>
+        </div>
+    </div>
+    <div id="wk-search" hidden><div class="box nimo-glass"><input class="text_pole" type="text" placeholder="Search the wiki…  (try: openrouter, swipe, recovery phrase)" autocomplete="off"><div id="wk-results"></div></div></div>
+    <footer class="nimo-footer">
+        This wiki is written for NimoTavern, a privacy-focused fork of <a href="https://github.com/SillyTavern/SillyTavern" target="_blank" rel="noopener">SillyTavern</a>. All credit for the features it documents goes to SillyTavern and its contributors.<br>
+        Spotted a mistake? <a href="/source">Open an issue on the source</a>. <a href="/privacy">Privacy &amp; security</a>
+    </footer>
+</body>
+</html>

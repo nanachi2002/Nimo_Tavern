@@ -1,0 +1,56 @@
+<!--TITLE Troubleshooting & FAQ -->
+<!--ICON fa-solid fa-life-ring -->
+<!--GROUP Help -->
+<!--DESC Fixes for the most common problems: login, iPhone, sync, connection errors, slow loading, and migration from the old server. -->
+<p>Start with the symptom closest to yours. Click a question to expand it.</p>
+
+<h2>Login &amp; browser problems</h2>
+<details class="wk-faq"><summary>"This browser can't run NimoTavern" / the login button is disabled</summary><div>
+<p>You're probably in an <b>in-app browser</b> (opened from Discord, Instagram, Messenger, TikTok…) or a <b>private tab</b>. Those block the "Service Worker" technology NimoTavern runs on.</p>
+<ol><li>Tap <b>•••</b> or the share icon and choose <b>Open in Safari</b> / <b>Open in Chrome</b>.</li><li>Leave private/incognito mode.</li><li>Log in again with the same details.</li></ol></div></details>
+<details class="wk-faq"><summary>"Couldn't get CSRF token. Please refresh the page."</summary><div>
+<p>The tavern's local engine wasn't ready when the page started (common on phones when the connection is slow or the browser just woke up). NimoTavern now retries by itself once. If you still see an error screen: tap <b>Try again</b>, then <b>Log in again</b>. If it persists, make sure you're in Safari/Chrome (not an app's browser) and not in a private tab, and send a screenshot of the message when you ask for help.</p></div></details>
+<details class="wk-faq"><summary>"Wrong username or password"</summary><div>
+<p>Check caps lock and keyboard autocorrect (phones love capitalizing the first letter of the username). Usernames aren't case-sensitive but the password is. If you really forgot it, use the <a href="/recover">recovery page</a> with your 12 words.</p></div></details>
+<details class="wk-faq"><summary>I got logged out by itself</summary><div>
+<p>Sessions last 30 days, and clearing your browser's site data, using "Log out everywhere", or logging into another account on the same browser removes the local keys. Log in again; your data is still on the server.</p></div></details>
+<details class="wk-faq"><summary>The page stays on a loading logo or a blank screen</summary><div>
+<ul><li>Reload once (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> for a hard refresh).</li><li>Disable extensions that modify pages (ad blockers with aggressive rules, dark-mode extensions) for this site.</li><li>In developer tools → Application → Service Workers, click <b>Unregister</b>, reload, and log in again.</li></ul></div></details>
+
+<h2 id="migration">Migrating from the old SillyTavern server</h2>
+<details class="wk-faq"><summary>How do I get my old chats and characters?</summary><div>
+<p>Accounts from the previous SillyTavern server were prepared in advance. Just go to the <a href="/login">login page</a> and enter your <b>old username and password</b>. NimoTavern recognizes the account, creates your encrypted account with the same password, imports everything (with a progress counter), shows you a <b>new recovery phrase</b> to save, and deletes the old unencrypted copy from the server when it's done. Keep the tab open until it finishes.</p></div></details>
+<details class="wk-faq"><summary>The import stopped halfway</summary><div>
+<p>Nothing is lost. Log in again with the same password and the import resumes. Use Safari/Chrome, keep the screen on, and stay on a stable connection.</p></div></details>
+<details class="wk-faq"><summary>My account says it's already taken or my password doesn't work</summary><div>
+<p>Use exactly your old username (letters, numbers and <code>_ . -</code> only) and the password you used on the old server. Accounts whose names weren't allowed in NimoTavern were renamed; if you're unsure, ask the person who invited you.</p></div></details>
+
+<h2>Connections &amp; replies</h2>
+<details class="wk-faq"><summary>"Failed to fetch" or a CORS error when generating</summary><div>
+<p>The provider (or your local server) blocks requests from web pages. For hosted providers, turn on the relay in <a href="/wiki/account">Account</a> (fallback mode). For a local server enable CORS or allowed-origins in its settings. See <a href="/wiki/connect-ai#troubleshooting-connections">connection troubleshooting</a>.</p></div></details>
+<details class="wk-faq"><summary>The AI forgets earlier events</summary><div>
+<p>The chat outgrew the context window. See <a href="/wiki/prompt#what-fits-in-the-context-window">Prompt &amp; context</a> for fixes: raise context size, trim cards, use Summarize or lorebooks.</p></div></details>
+<details class="wk-faq"><summary>Replies are repetitive or too short/long</summary><div>
+<p>Adjust response length, temperature, and repetition settings, see <a href="/wiki/presets">AI settings &amp; presets</a>. Also edit repeated phrases out of recent messages: the AI copies what it sees.</p></div></details>
+<details class="wk-faq"><summary>My local model works on my PC but not on my phone</summary><div>
+<p><code>localhost</code> on a phone is the phone itself. Give the model server an HTTPS address reachable from the phone and use that URL.</p></div></details>
+
+<h2>Sync &amp; storage</h2>
+<details class="wk-faq"><summary>My new device is slow the first time</summary><div>
+<p>It's downloading and decrypting your whole encrypted tavern once. Big accounts (hundreds of MB) take a minute or so on a good connection. After that it opens from the local copy almost instantly.</p></div></details>
+<details class="wk-faq"><summary>A change didn't appear on my other device</summary><div>
+<p>Wait for the upload indicator on the first device to clear, then reload the second one. Avoid editing the same chat on two devices at once, see <a href="/wiki/your-data">Your data</a>.</p></div></details>
+<details class="wk-faq"><summary>"Storage full" or uploads failing</summary><div>
+<p>You've reached your quota (see the bar on the Account page). Delete large unused images or old chats. Backgrounds and character PNGs use the most space.</p></div></details>
+<details class="wk-faq"><summary>A feature is missing (vectors, captioning, installing extensions)</summary><div>
+<p>Features that need server-side AI models or server-side installation are disabled to keep your data unreadable by the server. See the <a href="/wiki/extensions#what-works-on-nimotavern">extensions table</a>.</p></div></details>
+
+<h2>Privacy FAQ</h2>
+<details class="wk-faq"><summary>Can the admin read my chats?</summary><div><p>No. They have ciphertext they can't open, with no key. <a href="/wiki/security">Here's how</a>, and <a href="/wiki/verify">how to check</a>.</p></div></details>
+<details class="wk-faq"><summary>Can the admin reset my password?</summary><div><p>No, and that's by design. Only your recovery phrase can.</p></div></details>
+<details class="wk-faq"><summary>Do you see my API key?</summary><div><p>No. It's stored encrypted and sent only from your browser to your provider. (If you opt into the relay for a request, it passes through server memory for that request only.)</p></div></details>
+<details class="wk-faq"><summary>Is my data used to train anything?</summary><div><p>NimoTavern can't read it, so it can't be. Your <i>AI provider</i> has its own data policy for the prompts you send them, so read it.</p></div></details>
+<details class="wk-faq"><summary>Is this official SillyTavern?</summary><div><p>No. It's an independent privacy-focused fork, built on SillyTavern's code with full credit to its contributors, and licensed under the same AGPL-3.0. It isn't affiliated with the SillyTavern team, so please don't ask them for NimoTavern support.</p></div></details>
+
+<div class="callout note"><i class="fa-solid fa-comments"></i><div><strong class="t">Still stuck?</strong>
+<p>Ask whoever invited you, or open an issue on the <a href="/source">source repository</a>. Never include your password, recovery phrase or API key in a bug report.</p></div></div>

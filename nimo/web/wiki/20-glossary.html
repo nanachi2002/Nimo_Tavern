@@ -1,0 +1,54 @@
+<!--TITLE Glossary -->
+<!--ICON fa-solid fa-spell-check -->
+<!--GROUP Help -->
+<!--DESC Short definitions of the words you'll meet in SillyTavern and in NimoTavern's security pages. -->
+<h2>Roleplay &amp; AI terms</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>API</b></td><td>The way programs talk to an AI service. You connect SillyTavern to one with an endpoint and a key.</td></tr>
+<tr><td><b>API key</b></td><td>A secret string that identifies and bills you at a provider. See <a href="/wiki/connect-ai">Connect an AI</a>.</td></tr>
+<tr><td><b>Author's Note</b></td><td>A hidden instruction inserted into the prompt at a chosen depth.</td></tr>
+<tr><td><b>Character card</b></td><td>The file that defines a character: description, greeting, examples. See <a href="/wiki/characters">Characters</a>.</td></tr>
+<tr><td><b>Chat Completion / Text Completion</b></td><td>The two ways of sending prompts: as a list of role-tagged messages, or as one block of raw text.</td></tr>
+<tr><td><b>Context (window)</b></td><td>The maximum amount of text (in tokens) the AI can read at once, including its own reply.</td></tr>
+<tr><td><b>CORS</b></td><td>A browser rule that lets a server decide which websites may call it. The reason some providers need the relay.</td></tr>
+<tr><td><b>Greeting / First message</b></td><td>The character's opening line when a chat starts.</td></tr>
+<tr><td><b>Impersonate</b></td><td>Have the AI write your next message.</td></tr>
+<tr><td><b>Instruct template</b></td><td>The special tokens/format a local model expects around messages.</td></tr>
+<tr><td><b>Lorebook / World Info</b></td><td>Keyword-triggered notes injected into the prompt. See <a href="/wiki/world-info">World Info</a>.</td></tr>
+<tr><td><b>Macro</b></td><td>A <code>{{placeholder}}</code> replaced when the prompt is built.</td></tr>
+<tr><td><b>Min P / Top P / Top K</b></td><td>Samplers that cut unlikely words, see <a href="/wiki/presets">AI settings</a>.</td></tr>
+<tr><td><b>Model</b></td><td>The specific AI doing the writing.</td></tr>
+<tr><td><b>Persona</b></td><td>Your own identity in the story. See <a href="/wiki/personas">Personas</a>.</td></tr>
+<tr><td><b>Preset</b></td><td>A saved bundle of sampler/prompt settings.</td></tr>
+<tr><td><b>Prompt</b></td><td>Everything sent to the AI for one reply: instructions, cards, lore, chat.</td></tr>
+<tr><td><b>Provider</b></td><td>The company or program that runs the model.</td></tr>
+<tr><td><b>Quick Reply</b></td><td>A button that sends a prepared message or script.</td></tr>
+<tr><td><b>Regex</b></td><td>A pattern language for finding and replacing text.</td></tr>
+<tr><td><b>Sampler</b></td><td>The setting that decides how the next word is chosen.</td></tr>
+<tr><td><b>Stop string</b></td><td>Text that makes the AI stop writing when it appears.</td></tr>
+<tr><td><b>Swipe</b></td><td>An alternative version of an AI message.</td></tr>
+<tr><td><b>Temperature</b></td><td>The randomness dial, low is focused, high is creative.</td></tr>
+<tr><td><b>Token</b></td><td>A chunk of text (~¾ of a word) that models read and providers charge by.</td></tr>
+</table></div>
+
+<h2>NimoTavern &amp; security terms</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>AES-256-GCM</b></td><td>A widely trusted encryption algorithm that also detects tampering. Used for your files.</td></tr>
+<tr><td><b>Argon2id</b></td><td>A password-hashing function deliberately slow and memory-hungry to make guessing expensive.</td></tr>
+<tr><td><b>Blob</b></td><td>One encrypted file as the server sees it: an id plus bytes.</td></tr>
+<tr><td><b>Ciphertext</b></td><td>Encrypted data: unreadable without the key.</td></tr>
+<tr><td><b>DEK (data key)</b></td><td>The random 256-bit key that ultimately protects all your data.</td></tr>
+<tr><td><b>End-to-end / zero-knowledge</b></td><td>Only the endpoints (your devices) hold keys; the server learns nothing about the content.</td></tr>
+<tr><td><b>HKDF</b></td><td>A method of deriving several independent keys from one secret.</td></tr>
+<tr><td><b>HMAC</b></td><td>A keyed fingerprint. Used to turn file names into unguessable ids.</td></tr>
+<tr><td><b>IndexedDB</b></td><td>The browser's built-in database where the local encrypted copy and keys live.</td></tr>
+<tr><td><b>KEK (key-encryption key)</b></td><td>The key derived from your password (or phrase) that unlocks the DEK.</td></tr>
+<tr><td><b>Non-extractable key</b></td><td>A key the browser lets code use but never reveal.</td></tr>
+<tr><td><b>Recovery phrase</b></td><td>12 words that can unlock your DEK independently of your password.</td></tr>
+<tr><td><b>Relay</b></td><td>Optional pass-through for requests that providers block from browsers. Off by default.</td></tr>
+<tr><td><b>Service Worker</b></td><td>A background script in your browser. NimoTavern runs SillyTavern's server code in it.</td></tr>
+<tr><td><b>Session</b></td><td>The logged-in state on a device, stored as a hashed token server-side.</td></tr>
+<tr><td><b>Turnstile</b></td><td>Cloudflare's privacy-friendly captcha used on the sign-up page.</td></tr>
+</table></div>

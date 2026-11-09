@@ -1,0 +1,83 @@
+<!--TITLE World Info (lorebooks) -->
+<!--ICON fa-solid fa-book-atlas -->
+<!--GROUP Shape the AI -->
+<!--DESC Give your story a memory: entries that appear in the prompt only when their keywords come up. -->
+<p>A <b>lorebook</b> (World Info) is a collection of small notes about your world: places, factions, items, rules, secrets. Each note has <b>trigger keywords</b>. When a keyword appears in the recent chat, the note is injected into the prompt, so the AI "remembers" it, and when it doesn't appear, the note costs nothing.</p>
+
+<h2>Try the trigger logic</h2>
+<p>This is exactly the idea. Edit the message and watch which entries wake up and what gets added to the prompt.</p>
+
+<!--nosearch-->
+<div class="widget" data-widget="lore"></div>
+<!--/nosearch-->
+
+<h2>Creating a lorebook</h2>
+<ol class="steps">
+    <li><b>Open World Info</b> (<i class="fa-solid fa-book-atlas"></i>) and click <b>New World</b>. Name it.</li>
+    <li><b>Add an entry</b> with <i class="fa-solid fa-plus"></i> <b>New Entry</b>.</li>
+    <li><b>Fill in the keys</b> (comma-separated triggers) and the <b>content</b>: the note itself, written as plain facts.</li>
+    <li><b>Make it active</b>: select it as a global book, or link it to a character or chat (below).</li>
+</ol>
+
+<!--nosearch-->
+<div class="demo tall" data-title="Adding a lorebook entry">
+<div class="demo-stage"><div class="mk">
+{{include:topbar}}
+<div class="mk-body">
+    <div class="mk-drawer left wide js-drawer" data-hide>
+        <h5><i class="fa-solid fa-book-atlas"></i> World Info <span class="menu_button green js-new" style="margin-left:auto"><i class="fa-solid fa-plus"></i> New Entry</span></h5>
+        <div class="text_pole fake-select">Eldoria Lore</div>
+        <div class="js-form" data-hide style="display:flex;flex-direction:column;gap:6px">
+            <label>Keywords (comma separated) <div class="text_pole js-keys"></div></label>
+            <label>Content <div class="text_pole js-content" style="min-height:52px;align-items:flex-start"></div></label>
+            <div class="row"><div class="badge">Position: before character</div><div class="badge">Order: 100</div><div class="badge">Active</div></div>
+        </div>
+    </div>
+    <div class="mk-toast js-toast" data-hide><i class="fa-solid fa-circle-check"></i> Entry saved</div>
+</div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"Open the World Info panel.","at":".js-wi","act":"click","show":[".js-drawer"]},
+ {"say":"Add a new entry.","at":".js-new","act":"click","show":[".js-form"]},
+ {"say":"List the keywords that should wake this entry up.","at":".js-keys","act":"type","text":"Ember Reef, the Reef, reef"},
+ {"say":"Write the fact itself, as a short statement.","at":".js-content","act":"type","text":"The Ember Reef is a cloud-forest of volcanic spires. Airships that enter lose their compasses."},
+ {"say":"From now on, any mention of the reef brings this fact into the AI's prompt automatically.","show":[".js-toast"],"wait":2000}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Entry settings that matter</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Setting</th><th>Meaning</th></tr>
+<tr><td><b>Keys</b></td><td>Words or phrases that trigger the entry (substring match by default; enable <i>whole words</i> to avoid "art" matching "start"). Regex keys are supported.</td></tr>
+<tr><td><b>Optional filter / secondary keys</b></td><td>An extra condition: the entry fires only if the primary key <i>and</i> any/all of the secondary keys appear (AND ANY / AND ALL), or none (NOT).</td></tr>
+<tr><td><b>Constant</b> <i class="fa-solid fa-circle" style="color:#7bd62a;font-size:.7em"></i></td><td>Always included, no keyword needed. Use sparingly: it's the same as putting text in the card.</td></tr>
+<tr><td><b>Position</b></td><td>Where it's inserted: before/after the character card, at the top/bottom of the Author's Note, or at a chosen depth in the chat.</td></tr>
+<tr><td><b>Order</b></td><td>When the budget is tight, higher order wins priority.</td></tr>
+<tr><td><b>Probability</b></td><td>Chance (%) that a triggered entry actually fires. Good for random events.</td></tr>
+<tr><td><b>Inclusion groups</b></td><td>Only one entry in a group may fire at a time (like rumors).</td></tr>
+<tr><td><b>Sticky / cooldown / delay</b></td><td>Keep an entry active for N messages once triggered, silence it for N messages, or wait N messages before it can fire.</td></tr>
+<tr><td><b>Recursion</b></td><td>Lets an entry's text trigger other entries. Powerful for linked lore, also easy to overdo.</td></tr>
+</table></div>
+
+<h2>Global, character and chat lorebooks</h2>
+<ul>
+    <li><b>Global:</b> active in every chat. Use for universal world rules.</li>
+    <li><b>Character:</b> attached to one character (in the character editor). Active whenever you chat with them.</li>
+    <li><b>Chat:</b> attached to a single conversation, via the chat's options menu.</li>
+    <li><b>Persona:</b> attached to your persona, for facts about <i>you</i>.</li>
+</ul>
+
+<h2>Global settings (top of the panel)</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Setting</th><th>Meaning</th></tr>
+<tr><td><b>Scan depth</b></td><td>How many recent messages are searched for keywords. Higher finds more, but may trigger things from old messages.</td></tr>
+<tr><td><b>Budget (% of context)</b></td><td>The most of your context lorebooks may use. Entries beyond it are skipped by order.</td></tr>
+<tr><td><b>Min activations</b></td><td>Keep scanning deeper until at least this many entries fire.</td></tr>
+<tr><td><b>Recursive scanning</b></td><td>Enables entries to trigger entries.</td></tr>
+</table></div>
+
+<div class="callout tip"><i class="fa-solid fa-lightbulb"></i><div><strong class="t">Writing good entries</strong>
+<ul>
+<li>One topic per entry, written as facts ("Ashfang is…"), not instructions.</li>
+<li>Include the name, alternate names and typos as keys.</li>
+<li>Keep entries short (50–150 tokens). Ten small entries beat one giant one.</li>
+</ul></div></div>

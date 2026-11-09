@@ -1,0 +1,65 @@
+<!--TITLE Extensions -->
+<!--ICON fa-solid fa-cubes -->
+<!--GROUP Shape the AI -->
+<!--DESC Summaries, expression sprites, Quick Replies, regex, image generation and more, and which ones work on NimoTavern. -->
+<p>Extensions add features to SillyTavern. Open them with the <i class="fa-solid fa-cubes"></i> icon: each extension is a collapsible section with its own settings.</p>
+
+<h2>What works on NimoTavern</h2>
+<p>NimoTavern runs SillyTavern's server code inside your browser, so features that only need the interface or your AI provider work normally. A few built-in features rely on <b>machine-learning models running on a server</b> (they'd need to read your plaintext there), so they're turned off on purpose.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Extension / feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td><b>Summarize</b></td><td><span class="badge ok">Works</span></td><td>Uses your AI provider to write recaps.</td></tr>
+<tr><td><b>Quick Replies</b></td><td><span class="badge ok">Works</span></td><td>Pure interface feature.</td></tr>
+<tr><td><b>Regex</b></td><td><span class="badge ok">Works</span></td><td>Runs in your browser.</td></tr>
+<tr><td><b>Expressions (sprites)</b></td><td><span class="badge warn">Partly</span></td><td>Sprites display fine. The server-side emotion classifier model is disabled; set expressions by command or use an LLM-based option if your version offers one.</td></tr>
+<tr><td><b>Author's Note, Backgrounds, Personas</b></td><td><span class="badge ok">Works</span></td><td>Built in.</td></tr>
+<tr><td><b>Image Generation</b></td><td><span class="badge warn">Depends</span></td><td>Works with providers that accept browser requests. Others may need the <a href="/wiki/connect-ai#the-optional-relay">relay</a>.</td></tr>
+<tr><td><b>Text-to-speech / speech recognition</b></td><td><span class="badge warn">Depends</span></td><td>Browser voices work. Cloud voice APIs depend on provider CORS.</td></tr>
+<tr><td><b>Translation</b></td><td><span class="badge warn">Depends</span></td><td>Needs a translator that allows browser access.</td></tr>
+<tr><td><b>Vector Storage / Data Bank search (RAG)</b></td><td><span class="badge no">Disabled</span></td><td>Needs server-side embeddings of your text.</td></tr>
+<tr><td><b>Image captioning (local models)</b></td><td><span class="badge no">Disabled</span></td><td>Server-side vision models. Use a multimodal provider instead.</td></tr>
+<tr><td><b>Installing third-party extensions</b></td><td><span class="badge no">Not yet</span></td><td>Installing from a URL runs server-side code and git. Planned.</td></tr>
+</table></div>
+<div class="callout note"><i class="fa-solid fa-circle-info"></i><div><p>This list is about what's possible technically. If something misbehaves, check <a href="/wiki/troubleshooting">Troubleshooting</a>.</p></div></div>
+
+<h2>Summarize</h2>
+<p>Condenses the chat so far into a short recap that is always kept in the prompt, so the AI remembers old events after they scroll out of the context window.</p>
+<ol class="steps">
+    <li><b>Open Extensions → Summarize.</b></li>
+    <li><b>Choose the source</b>: your main API (simplest) or another connected one.</li>
+    <li><b>Set how often</b> to summarize (every N messages or words), or press <i>Summarize now</i>.</li>
+    <li><b>Read and edit</b> the summary text: you can fix mistakes or add facts. It's yours.</li>
+</ol>
+
+<h2>Quick Replies</h2>
+<p>A bar of buttons above the message box. Each button sends a prepared message or runs a small script. Examples: <i>"*sighs and continues*"</i>, a "Summarize now" button, or a button that toggles a lorebook entry. Create sets in <b>Extensions → Quick Reply</b>, give each reply a label and a message (can use <a href="/wiki/commands">slash commands</a>), then enable the set globally or for a character.</p>
+
+<!--nosearch-->
+<div class="demo" data-title="Using Quick Replies">
+<div class="demo-stage"><div class="mk"><div class="mk-body"><div class="mk-chat">
+<div class="mk-msg"><div class="av">M</div><div><div class="nm">Captain Mira</div><div class="tx">“Well? Are you going to stand there all day?”</div></div></div>
+<div class="mk-msg user js-me" data-hide><div class="av">Y</div><div><div class="nm">You</div><div class="tx">*I sigh and follow her aboard.*</div></div></div>
+<div class="row" style="gap:6px"><div class="menu_button js-q1">Sigh &amp; follow</div><div class="menu_button js-q2">Ask a question</div><div class="menu_button js-q3"><i class="fa-solid fa-scroll"></i> Summarize now</div></div>
+</div></div>
+{{include:sendbar}}
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"Quick Reply buttons sit above the message box.","at":".js-q1","act":"none","wait":1400},
+ {"say":"One click sends the pre-written message.","at":".js-q1","act":"click","show":[".js-me"],"wait":1800}
+]</script></div>
+<!--/nosearch-->
+
+<h2>Regex</h2>
+<p>Finds-and-replaces text automatically. Common uses: hide <code>&lt;thinking&gt;</code> blocks from the displayed message, clean formatting the AI adds, or alter what's sent to the AI without changing what you see. Each script has a <b>find pattern</b> (regular expression), a <b>replacement</b>, and checkboxes for <i>where</i> it applies (user input, AI output, the prompt, display only…). Test with the built-in tester before enabling.</p>
+
+<h2>Expressions</h2>
+<p>Shows a character sprite that changes with their mood (joy, anger, surprise…). Put sprite images in the character's expression folder through the extension's <i>Upload</i> button, named after the emotion (<code>joy.png</code>, <code>sadness.png</code>…). Where the automatic classifier isn't available, set the sprite yourself with a slash command such as <code>/expression-set joy</code>.</p>
+
+<h2>Image generation, TTS and others</h2>
+<ul>
+    <li><b>Image Generation</b>: turns the scene into an image prompt, then asks an image provider for the picture. Configure the provider and your key in the extension's panel.</li>
+    <li><b>TTS</b>: reads replies out loud with your browser's voices or a connected voice provider.</li>
+    <li><b>Translation</b>: auto-translates incoming and outgoing messages.</li>
+    <li><b>Token counter &amp; other utilities</b>: small helpers, each documented in its own panel.</li>
+</ul>
+<div class="callout secure"><i class="fa-solid fa-key"></i><div><p>Any extension that calls an outside service sends data <b>from your browser to that service</b>. Use ones whose privacy policy you trust, just as with your AI provider.</p></div></div>
