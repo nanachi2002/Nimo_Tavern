@@ -90,6 +90,12 @@ body.nimo-mp-gone #send_form { opacity: .55; pointer-events: none; }
 .nimo-mp-persona span { display: flex; flex-direction: column; min-width: 0; }
 .nimo-mp-persona small { color: var(--SmartThemeEmColor); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+@media (max-width: 600px) {
+    /* Phones: every seat stays visible (wraps to a second line instead of scrolling sideways). */
+    #nimo-mp-bar .nimo-mp-seats { flex-wrap: wrap; overflow-x: visible; gap: 4px; }
+    #nimo-mp-bar .nimo-mp-seat { padding: 2px 8px 2px 2px; gap: 4px; font-size: .88em; }
+    #nimo-mp-bar .nimo-mp-seat img { width: 20px; height: 20px; }
+}
 @media (max-width: 1000px) {
     #nimo-mp-bar { padding: 4px 6px; }
     #nimo-mp-bar .nimo-mp-title { max-width: 55%; }

@@ -89,8 +89,8 @@ function connect() {
     ws.onclose = () => { wsOpen = false; ws = null; setTimeout(connect, Math.min(30_000, 1000 * 2 ** wsRetry++)); };
     ws.onerror = () => { };
     ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } onPush(m).catch((err) => console.warn('[nimo-mp]', err)); };
-    setInterval(() => { if (wsOpen) ws?.send('{"t":"ping"}'); }, 25_000);
 }
+setInterval(() => { if (wsOpen) ws?.send('{"t":"ping"}'); }, 25_000);
 
 async function onPush(m) {
     if (m.t === 'inbox') { window.dispatchEvent(new CustomEvent('nimo-inbox')); checkJoined(); return; }
@@ -106,7 +106,7 @@ async function onPush(m) {
         case 'ai_start': aiStart(m); break;
         case 'ai_delta': aiDelta(m); break;
         case 'ai_end': if (!m.ok) aiFail(); break;
-        case 'kicked': sessionGone('You were removed from this session by the host.'); break;
+        case 'kicked': sessionGone(m.reason === 'left' ? 'You left this session.' : 'You were removed from this session by the host.'); break;
         case 'ended': sessionGone('The host ended this session.'); break;
         case 'error': if (m.error === 'gone') sessionGone('This session no longer exists.'); else if (m.error === 'forbidden') sessionGone('You are no longer in this session.'); break;
     }
@@ -121,7 +121,12 @@ function toSt(m) {
 }
 const sortedMsgs = () => [...cur.msgs.values()].filter((m) => !m.deleted).sort((a, b) => a.id - b.id);
 
+function cancelLocalEdit() {
+    const ta = document.getElementById('curEditTextarea');
+    ta?.closest('.mes')?.querySelector('.mes_edit_cancel')?.click();
+}
 async function rebuild() {
+    cancelLocalEdit();
     const c = ctx();
     if (cur.pending) cur.pending = null;
     c.chat.length = 0;
@@ -149,7 +154,7 @@ function decorate() {
         if (!msg) return;
         el.classList.toggle('nimo-mp-ooc', !!msg.extra?.nimo_ooc);
         const mine = msg.extra?.nimo_mid && msg.extra.nimo_mid === myMid;
-        el.classList.toggle('nimo-mp-locked', !host && !mine);
+        el.classList.toggle('nimo-mp-locked', !msg.extra?.nimo_id || (!host && !mine));
     });
 }
 
@@ -211,6 +216,7 @@ function aiStart(m) {
         c.addOneMessage(c.chat[c.chat.length - 1]);
         cur.pending = { gid: m.gid, idx: c.chat.length - 1, reroll: null, text: '' };
     }
+    decorate();
 }
 function aiDelta(m) {
     const p = cur.pending;
@@ -407,8 +413,8 @@ window.addEventListener('click', (e) => {
         (async () => {
             const ok = await ctx().Popup.show.confirm('Delete this message for everyone?', 'It will be removed from the multiplayer session.');
             if (!ok) return;
+            cancelLocalEdit();
             try { await api('POST', `/sessions/${cur.sid}/delete`, { id: msg.extra.nimo_id }); } catch (err) { toastr.error(err.message, 'Multiplayer'); }
-            document.querySelector(`.mes[mesid="${idx}"] .mes_edit_cancel`)?.click();
         })();
     }
 }, true);
@@ -685,7 +691,7 @@ async function hostSettings() {
         <div class="nimo-mp-players">${playersHtml()}</div>
         <div class="flex-container alignItemsCenter"><input class="text_pole flex1" name="invite" placeholder="Invite by username"><div class="menu_button menu_button_icon" data-invite><i class="fa-solid fa-envelope"></i><span>Invite</span></div></div>
         <div class="flex-container"><div class="menu_button menu_button_icon" data-ctl="skip"><i class="fa-solid fa-forward"></i><span>Skip current turn</span></div>
-        <div class="menu_button menu_button_icon" data-ctl="${v.state.paused ? 'resume' : 'pause'}"><i class="fa-solid ${v.state.paused ? 'fa-play' : 'fa-pause'}"></i><span>${v.state.paused ? 'Resume' : 'Pause'}</span></div></div>
+        <div class="menu_button menu_button_icon" data-ctl="pausetoggle"><i class="fa-solid ${v.state.paused ? 'fa-play' : 'fa-pause'}"></i><span>${v.state.paused ? 'Resume' : 'Pause'}</span></div></div>
         <h4>Rules</h4>${rulesFields(cfg)}
         <h4>AI <small>(this session's own provider)</small></h4>${providerFields(cfg.provider)}${samplingFields(cfg.sampling)}
         <h4>World</h4>
@@ -711,7 +717,10 @@ async function hostSettings() {
                 if (!u) return;
                 try { const r = await api('POST', `/sessions/${sid}/invite`, { username: u }); toastr.success(r.message, 'Invite'); inp.value = ''; } catch (err) { toastr.error(err.message, 'Invite'); }
             });
-            d.querySelectorAll('[data-ctl]').forEach((b) => b.addEventListener('click', async () => { try { await api('POST', `/sessions/${sid}/control`, { action: b.dataset.ctl }); p.completeCancelled(); } catch (err) { toastr.error(err.message); } }));
+            d.querySelectorAll('[data-ctl]').forEach((b) => b.addEventListener('click', async () => {
+                const action = b.dataset.ctl === 'pausetoggle' ? (cur.view.state.paused ? 'resume' : 'pause') : b.dataset.ctl;
+                try { await api('POST', `/sessions/${sid}/control`, { action }); p.completeCancelled(); } catch (err) { toastr.error(err.message); }
+            }));
             d.querySelector('.nimo-mp-players').addEventListener('click', async (e) => {
                 const row = e.target.closest('.nimo-mp-player');
                 const mid = e.target.dataset.mid2 || row?.dataset.mid;

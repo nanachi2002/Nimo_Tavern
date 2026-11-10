@@ -24,7 +24,7 @@ export function createHub({ getSession, engine }) {
         broadcast(sid, obj) { for (const ws of bySession.get(sid) || []) send(ws, obj); },
         toUser(userId, obj) { for (const ws of byUser.get(String(userId)) || []) send(ws, obj); },
         watching(userId, sid) { for (const ws of byUser.get(String(userId)) || []) if (ws.subs.has(sid)) return true; return false; },
-        dropUser(userId, sid) { for (const ws of [...(byUser.get(String(userId)) || [])]) if (ws.subs.has(sid)) { unsubscribe(ws, sid); send(ws, { t: 'kicked', sid }); } },
+        dropUser(userId, sid, reason = 'kicked') { for (const ws of [...(byUser.get(String(userId)) || [])]) { if (ws.subs.has(sid)) unsubscribe(ws, sid); send(ws, { t: 'kicked', sid, reason }); } },
         dropSession(sid) { for (const ws of [...(bySession.get(sid) || [])]) unsubscribe(ws, sid); },
 
         /** Called from the HTTP server's 'upgrade' event. */

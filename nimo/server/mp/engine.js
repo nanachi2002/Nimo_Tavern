@@ -188,11 +188,12 @@ export function createEngine({ pool, sealer }) {
             const s = r2.state;
             s.gen = false;
             if (err) {
-                s.error = 'The AI could not answer. The host can retry.';
+                const stopped = ac.signal.aborted;
+                s.error = stopped ? 'The host stopped the reply.' : 'The AI could not answer. The host can retry.';
                 await saveState(r2, s);
                 hub.broadcast(sid, { t: 'ai_end', sid, gid, ok: false });
                 const msg = err instanceof ProviderError ? err.message : 'Could not reach the AI provider';
-                hub.toUser(String(r2.host_id), { t: 'ai_error', sid, error: msg });
+                if (!stopped) hub.toUser(String(r2.host_id), { t: 'ai_error', sid, error: msg });
                 await pushState(r2);
                 return;
             }
@@ -402,7 +403,7 @@ export function createEngine({ pool, sealer }) {
                 const r = await loadRow(sid);
                 const me = await membership(r, userId);
                 if (me.role === 'host') throw new MpError('The host can end the session instead');
-                await dropMember(r, me.mid, userId);
+                await dropMember(r, me.mid, userId, 'left');
                 const host = String(r.host_id);
                 const { rows } = await pool.query('SELECT username FROM users WHERE id = $1', [userId]);
                 await notice(host, sid, 'left', rows[0]?.username, info(r).title);
@@ -491,7 +492,6 @@ export function createEngine({ pool, sealer }) {
                 if (!rows[0] || rows[0].role !== 'player') throw new MpError('Player not found', 404);
                 await dropMember(r, String(mid), rows[0].user_id);
                 await notice(String(rows[0].user_id), sid, 'kicked', r.host_name, info(r).title);
-                hub.toUser(String(rows[0].user_id), { t: 'kicked', sid });
             });
         },
 
@@ -637,7 +637,7 @@ export function createEngine({ pool, sealer }) {
         runAi,
     };
 
-    async function dropMember(r, mid, userId) {
+    async function dropMember(r, mid, userId, reason = 'kicked') {
         await pool.query('DELETE FROM mp_members WHERE session_id = $1 AND user_id = $2', [r.id, userId]);
         const s = r.state;
         const wasTurn = s.turn === mid;
@@ -645,7 +645,7 @@ export function createEngine({ pool, sealer }) {
         s.order = s.order.filter((m) => m !== mid);
         s.posted = s.posted.filter((m) => m !== mid);
         if (s.turn === 'players' && s.order.length && s.order.every((m) => s.posted.includes(m))) s.turn = 'ai';
-        hub.dropUser(String(userId), r.id);
+        hub.dropUser(String(userId), r.id, reason);
         await advance(r);
         await pushMembers(r);
     }
