@@ -7,9 +7,24 @@
 <div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">Multiplayer is not end-to-end encrypted</strong>
 <p>Your solo chats never leave your browser unencrypted. Multiplayer can't work that way: to run the AI for the whole group, even when the host is offline, the server reads the session while it writes the prompt. Sessions are encrypted at rest, never logged, and deleted when the host ends them. <a href="/privacy#multiplayer">All the details</a>.</p></div></div>
 
+<h2>The multiplayer site: play.nimorp.lol</h2>
+<p>Multiplayer runs on its own address, <b><a href="https://play.nimorp.lol">play.nimorp.lol</a></b>. Log in there with your usual username and password: it's the same account, with your characters, personas and lorebooks.</p>
+<div class="callout secure"><i class="fa-solid fa-shield-halved"></i><div><strong class="t">Why a separate site?</strong>
+<p>A session holds <b>other people's</b> messages and personas. On the main site you can install <a href="/wiki/extensions">extensions</a>, which are code written by others. To your browser, play.nimorp.lol is a different website, so those extensions <b>can't load there or reach it</b>. That's enforced by the browser itself, not just by our code.</p></div></div>
+<ul>
+    <li><b>No extension runs on the play site</b>, only SillyTavern's built-in ones.</li>
+    <li>The play site <b>never writes to your synced storage</b>, so nothing from a session can end up where extensions could read it.
+        <ul>
+            <li>Session chats, and any changes you make there (settings, new characters…), stay on that device.</li>
+            <li>Your sessions themselves live on the server and reappear on any device you log in from.</li>
+        </ul>
+    </li>
+    <li>On the main site, <i class="fa-solid fa-dice-d20"></i> <b>Multiplayer…</b> in the chat options menu, and the mailbox badge, take you to the play site.</li>
+</ul>
+
 <h2>Starting a session (host)</h2>
 <ol class="steps">
-    <li><b>Open a chat</b> with the character you want as the AI (any character, and your existing messages can come along).</li>
+    <li>On <b>play.nimorp.lol</b>, <b>open a chat</b> with the character you want as the AI (any character, and your existing messages can come along).</li>
     <li>Open the <i class="fa-solid fa-bars"></i> <b>chat options</b> menu (left of the message box) and choose <i class="fa-solid fa-dice-d20"></i> <b>Make multiplayer…</b></li>
     <li><b>Read the privacy note</b> and tick the box.</li>
     <li><b>Set up the AI for the session.</b> This is a separate connection from your solo one: pick a provider (OpenRouter, OpenAI, DeepSeek, Claude, Gemini or any OpenAI-compatible proxy), a model and an <b>API key you only use for multiplayer</b>. Click <i>Test connection</i>.</li>
@@ -45,7 +60,7 @@
 <!--/nosearch-->
 
 <h2>Joining (players)</h2>
-<p>When someone invites you, a small badge appears on the <i class="fa-solid fa-user-gear"></i> <b>User Settings</b> button and on <b>Account</b>. Open <b>Account → Mailbox</b>, read the privacy note and <b>Accept</b>. When you open your tavern, it asks <b>which persona you want to play</b>: the others see that persona's name, picture and description. The session then shows up in your character list as a chat with the AI character.</p>
+<p>When someone invites you, a small badge appears on the <i class="fa-solid fa-user-gear"></i> <b>User Settings</b> button and on <b>Account</b>, on both sites. Open <b>Account → Mailbox</b> on <b>play.nimorp.lol</b>, read the privacy note and <b>Accept</b>. When you open the tavern there, it asks <b>which persona you want to play</b>: the others see that persona's name, picture and description. The session then shows up in your character list as a chat with the AI character.</p>
 <p>You can <b>Decline</b>, or <b>Block</b> someone so they can't invite you again. In <i>Invite settings</i> you can turn invites off completely.</p>
 
 <h2>Playing</h2>
@@ -109,6 +124,7 @@
 <h2>Good to know</h2>
 <ul>
     <li>Multiplayer works with one AI character per session. For several AI characters in one scene, use a <a href="/wiki/groups">group chat</a> (solo).</li>
-    <li>The AI uses a simplified version of SillyTavern's prompt: main prompt, character card, world setting, lorebook entries that match the recent messages, everyone's personas, example messages, recent history and a final instruction. Solo-only features like extensions, Author's Note and presets don't apply to it.</li>
+    <li>The AI uses a simplified version of SillyTavern's prompt: main prompt, character card, world setting, lorebook entries that match the recent messages, everyone's personas, example messages, recent history and a final instruction. Solo-only features like Author's Note and presets don't apply to it, and extensions never run on the play site.</li>
     <li>Sessions with no activity for 90 days are deleted from the server.</li>
+    <li>When the host starts a session from a chat, that original solo chat isn't changed: the session gets its own entry in the character list.</li>
 </ul>

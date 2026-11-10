@@ -6,6 +6,10 @@ import { user_avatar } from '../../../personas.js';
 import { world_names } from '../../../world-info.js';
 
 const API = '/api/nimo/mp';
+// Multiplayer runs on its own site, play.<host>: a separate browser origin where no third-party extension can
+// load. On the main site this extension is only a launcher (and cleans up old session characters).
+const PLAY = location.hostname.toLowerCase().startsWith('play.');
+const PLAY_URL = location.protocol + '//' + (PLAY ? location.host : 'play.' + location.host) + '/';
 const DEFAULT_MAIN = 'Write {{char}}\'s next reply in a fictional group roleplay between {{char}} and the players: {{group}}. '
     + 'Each player controls their own character; the persona descriptions below say who they are. '
     + 'Narrate the world and any side characters as needed, react to every player\'s latest action, and keep the story moving. '
@@ -421,7 +425,7 @@ window.addEventListener('click', (e) => {
 
 // Safety net: nothing may generate locally in a multiplayer chat (regenerate, continue, impersonate, /gen...).
 globalThis.nimoMultiplayerInterceptor = async function (chat, _contextSize, abort, type) {
-    if (!currentSid()) return;
+    if (!PLAY || !currentSid()) return;
     abort(true);
     if (type !== 'quiet') toastr.info('In multiplayer, the AI answers on its own turn.', 'Multiplayer', { preventDuplicates: true });
     // A message that slipped through (e.g. /send): remove the local copy and post it to the session instead.
@@ -581,13 +585,12 @@ async function makeMultiplayer() {
             history: d.querySelector('[name=history]').checked ? c.chat.filter((m) => !m.is_system && m.mes).map((m) => ({ kind: m.is_user ? 'player' : 'ai', name: m.name, text: m.mes })) : [],
         };
         const { sid } = await api('POST', '/sessions', body);
-        ctx().chatMetadata.nimo_mp = { sid, rev: 0 };
-        await ctx().saveMetadata();
         const invites = d.querySelector('[name=invite]').value.split(/[,\s]+/).map((x) => x.trim().replace(/^@/, '')).filter(Boolean);
         for (const u of invites) { try { await api('POST', `/sessions/${sid}/invite`, { username: u }); } catch (err) { toastr.warning(`${u}: ${err.message}`, 'Invite'); } }
         toastr.clear(busy);
         toastr.success(invites.length ? `Invites sent to ${invites.join(', ')}.` : 'Invite friends from the Session button.', 'Multiplayer session started');
-        await onChatChanged();
+        // The session gets its own entry in the character list; your solo chat stays as it was.
+        await openSessionChat({ sid, title: body.title, hostName: ctx().name1, charName: ch.name });
     } catch (err) { toastr.clear(busy); toastr.error(err.message, 'Multiplayer'); }
 }
 
@@ -626,8 +629,13 @@ async function pickPersona(s, force = false) {
     } catch (err) { toastr.error(err.message, 'Multiplayer'); }
 }
 
-/** Finds (or creates) the local character that holds this session's chat for an invited player. */
+/** Finds (or creates) the local character that holds this session's chat. On the play site these are kept in
+ * this browser only (never synced), and recreated from the server after a new login. */
 async function openSessionChat(s) {
+    const idx = await ensureSessionCharacter(s);
+    if (idx >= 0) await ctx().selectCharacterById(idx);
+}
+async function ensureSessionCharacter(s) {
     let c = ctx();
     let idx = c.characters.findIndex((x) => x?.data?.extensions?.nimo_mp?.sid === s.sid);
     if (idx < 0) {
@@ -643,7 +651,7 @@ async function openSessionChat(s) {
         c = ctx();
         idx = c.characters.findIndex((x) => x.avatar === avatar);
     }
-    if (idx >= 0) await c.selectCharacterById(idx);
+    return idx;
 }
 
 /** On load and when the mailbox changes: sessions you accepted but haven't set up yet. */
@@ -653,8 +661,9 @@ async function checkJoined() {
     try {
         const list = await api('GET', '/sessions');
         for (const s of list) {
-            if (s.me?.role !== 'player' || s.me.hasPersona) continue;
-            await pickPersona({ sid: s.sid, title: s.title, hostName: s.hostName, charName: s.charName });
+            const info = { sid: s.sid, title: s.title, hostName: s.hostName, charName: s.charName };
+            if (s.me?.role === 'player' && !s.me.hasPersona) await pickPersona(info);
+            else if (s.me?.hasPersona) await ensureSessionCharacter(info); // e.g. first visit on this device
         }
     } catch { /* offline */ } finally { checking = false; }
 }
@@ -780,12 +789,43 @@ function updateMenu() {
 }
 
 // =====================================================================================================
+// Main site: a launcher. Opens the play site, and removes the session characters that older versions
+// created in the shared storage (where extensions could read them).
+function launcherMenu() {
+    if (document.getElementById('option_nimo_multiplayer')) return;
+    const item = document.createElement('a');
+    item.id = 'option_nimo_multiplayer';
+    item.innerHTML = '<i class="fa-lg fa-solid fa-dice-d20"></i><span>Multiplayer…</span>';
+    item.title = 'Multiplayer opens on its own site, where extensions are off';
+    document.getElementById('option_convert_to_group')?.after(item);
+    item.addEventListener('click', () => {
+        document.getElementById('options')?.style.setProperty('display', 'none');
+        window.open(PLAY_URL, '_blank', 'noopener');
+    });
+}
+async function removeOldSessionCharacters() {
+    const c = ctx();
+    const old = (c.characters || []).filter((x) => x?.data?.extensions?.nimo_mp?.sid);
+    for (const ch of old) {
+        try { await fetch('/api/characters/delete', { method: 'POST', headers: c.getRequestHeaders(), body: JSON.stringify({ avatar_url: ch.avatar, delete_chats: true }) }); } catch { /* */ }
+    }
+    if (old.length) {
+        await c.getCharacters?.();
+        toastr.info(`Multiplayer moved to its own site, where extensions can't run. Your sessions are waiting at ${PLAY_URL}`, 'Multiplayer', { timeOut: 15000 });
+    }
+}
+
 const { eventSource, eventTypes } = ctx();
-eventSource.on(eventTypes.CHAT_CHANGED, () => { onChatChanged().catch((e) => console.warn('[nimo-mp]', e)); });
-eventSource.on(eventTypes.MESSAGE_EDITED, (idx) => { onMessageEdited(Number(idx)).catch(() => { }); });
-eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, () => { if (cur) decorate(); });
-eventSource.on(eventTypes.USER_MESSAGE_RENDERED, () => { if (cur) decorate(); });
-connect();
-onChatChanged().catch(() => { });
-setTimeout(checkJoined, 2500);
-window.nimoMultiplayer = { openSessionChat, makeMultiplayer };
+if (PLAY) {
+    eventSource.on(eventTypes.CHAT_CHANGED, () => { onChatChanged().catch((e) => console.warn('[nimo-mp]', e)); });
+    eventSource.on(eventTypes.MESSAGE_EDITED, (idx) => { onMessageEdited(Number(idx)).catch(() => { }); });
+    eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, () => { if (cur) decorate(); });
+    eventSource.on(eventTypes.USER_MESSAGE_RENDERED, () => { if (cur) decorate(); });
+    connect();
+    onChatChanged().catch(() => { });
+    setTimeout(checkJoined, 2500);
+    window.nimoMultiplayer = { openSessionChat, makeMultiplayer };
+} else {
+    eventSource.on(eventTypes.APP_READY, () => { launcherMenu(); removeOldSessionCharacters().catch(() => { }); });
+    launcherMenu();
+}

@@ -1,0 +1,13 @@
+{
+    "display_name": "NimoFramework example",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "",
+    "author": "NimoTavern",
+    "version": "1.0.0",
+    "homePage": "https://github.com/nanachi2002/Nimo_Tavern/tree/main/nimo/framework",
+    "auto_update": false,
+    "nimo": { "framework": 1, "server": "server.cjs" }
+}

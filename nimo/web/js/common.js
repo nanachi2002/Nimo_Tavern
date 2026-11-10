@@ -42,6 +42,9 @@ export async function ensureServiceWorker() {
 export function swMessage(msg, expect, timeout = 120000) {
     return new Promise((resolve, reject) => {
         const sw = navigator.serviceWorker.controller || null;
+        // After logout / account deletion the server's Clear-Site-Data already removed the Service Worker:
+        // a fire-and-forget message has nobody to go to (waiting for `ready` would hang forever).
+        if (!sw && !expect) { resolve(); return; }
         const target = sw || (navigator.serviceWorker.ready.then(r => r.active));
         const onMsg = (e) => {
             if (!expect) return;
@@ -55,8 +58,20 @@ export function swMessage(msg, expect, timeout = 120000) {
 }
 
 /** Store working keys locally (wiping any other user's local data first) and start the tavern. */
+/** Shared computers: drop anything a previous session (or one of its extensions) may have left in the browser. */
+async function cleanBrowserLeftovers() {
+    try {
+        for (const r of await navigator.serviceWorker.getRegistrations()) {
+            const script = (r.active || r.waiting || r.installing)?.scriptURL || '';
+            if (r.scope !== location.origin + '/' || !script.startsWith(location.origin + '/nimo-sw.js')) await r.unregister();
+        }
+    } catch { /* */ }
+    try { for (const k of await caches.keys()) await caches.delete(k); } catch { /* */ }
+}
+
 export async function unlockWithDek(dek, username) {
     const prev = await loadKeys();
+    await cleanBrowserLeftovers();
     await ensureServiceWorker();
     if (prev && prev.username?.toLowerCase() !== username.toLowerCase()) {
         await swMessage({ type: 'nimo-lock', wipe: true });

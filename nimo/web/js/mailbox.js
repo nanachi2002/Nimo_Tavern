@@ -10,8 +10,8 @@ const NOTICE = {
     joined: (n) => ['fa-user-plus', `<b>@${escHtml(n.who)}</b> joined <b>${escHtml(n.title)}</b>.`],
     declined: (n) => ['fa-user-xmark', `<b>@${escHtml(n.who)}</b> declined your invite to <b>${escHtml(n.title)}</b>.`],
     left: (n) => ['fa-door-open', `<b>@${escHtml(n.who)}</b> left <b>${escHtml(n.title)}</b>.`],
-    kicked: (n) => ['fa-door-closed', `The host removed you from <b>${escHtml(n.title)}</b>. Your copy of the chat stays in your tavern.`],
-    ended: (n) => ['fa-flag-checkered', `<b>@${escHtml(n.who)}</b> ended <b>${escHtml(n.title)}</b>. Your copy of the chat stays in your tavern.`],
+    kicked: (n) => ['fa-door-closed', `The host removed you from <b>${escHtml(n.title)}</b>. Your copy of the chat stays on this site.`],
+    ended: (n) => ['fa-flag-checkered', `<b>@${escHtml(n.who)}</b> ended <b>${escHtml(n.title)}</b>. Your copy of the chat stays on this site.`],
 };
 const MP_PRIVACY = `<div class="nimo-mail-privacy"><b><i class="fa-solid fa-triangle-exclamation"></i> Multiplayer isn't end-to-end encrypted.</b>
     To run the AI for everyone, the NimoTavern server reads the session while it writes the prompt (your messages and your persona's name, picture and description).
@@ -54,7 +54,24 @@ async function loadMailSettings() {
     $('#mail-blocked').innerHTML = s.blocked.length ? 'Blocked: ' + s.blocked.map((u) => `<span class="nimo-mail-blocked">@${escHtml(u)} <a href="#" data-unblock="${escHtml(u)}">unblock</a></span>`).join(' ') : '';
 }
 
+const PLAY = location.hostname.toLowerCase().startsWith('play.');
+
+/** Main site: multiplayer (and its mailbox) lives on play.<host>, out of reach of extensions. Only the count shows here. */
+async function mainSiteMailbox() {
+    const url = `${location.protocol}//play.${location.host}/account#mailbox`;
+    let n = 0;
+    try { n = (await fetch('/api/nimo/mp/inbox/count', { credentials: 'same-origin' }).then((r) => r.json())).n || 0; } catch { /* */ }
+    $('#mail-invites').innerHTML = `<p>${n ? `You have <b>${n}</b> new invite${n > 1 ? 's or notices' : ' or notice'}.` : 'Multiplayer invites and news are waiting for you on the multiplayer site.'}</p>
+        <p class="nimo-muted">Multiplayer has its own site, <b>play.${escHtml(location.host)}</b>, where extensions can never run, so they can't see your group sessions or the other players. Log in there with the same username and password.</p>
+        <a class="menu_button primary" style="width:auto;text-decoration:none;display:inline-flex" href="${escHtml(url)}"><i class="fa-solid fa-dice-d20"></i> Open the multiplayer site</a>`;
+    $('#mail-count').hidden = !n;
+    $('#mail-count').textContent = n;
+    $('#mail-empty').hidden = true;
+    document.querySelector('.nimo-mail-settings')?.setAttribute('hidden', '');
+}
+
 export function initMailbox() {
+    if (!PLAY) { mainSiteMailbox(); return; }
     $('#mail-invites').addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-act]');
         if (!btn) return;
@@ -68,7 +85,7 @@ export function initMailbox() {
         try {
             if (act === 'join') {
                 await api(`/mp/invites/${id}/accept`, {});
-                card.innerHTML = `<div class="nimo-mail-body"><div class="nimo-ok"><i class="fa-solid fa-check"></i> You joined! Open your tavern: it will ask which persona you want to play.</div>
+                card.innerHTML = `<div class="nimo-mail-body"><div class="nimo-ok"><i class="fa-solid fa-check"></i> You joined! Open the tavern on this site: it will ask which persona you want to play.</div>
                     <div class="nimo-mail-actions"><a class="menu_button primary" href="/" style="text-decoration:none"><i class="fa-solid fa-door-open"></i> Open my tavern</a></div></div>`;
             } else {
                 await api(`/mp/invites/${id}/decline`, { block: act === 'block' });

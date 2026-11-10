@@ -78,6 +78,10 @@ export class Store {
         this.cursor = 0;
         this.onAuthError = null;
         this.quota = null;
+        // Play site (multiplayer): reads the user's storage but never writes back to it. Changes stay in this
+        // browser's encrypted local cache only, so nothing from a multiplayer session can ever reach the shared
+        // storage that extensions on the main site can read.
+        this.localOnly = !!keys.localOnly;
     }
 
     async id(p) {
@@ -176,6 +180,7 @@ export class Store {
     }
 
     async _flushInner() {
+        if (this.localOnly) return this._flushLocal();
         const paths = [...vfs.dirty];
         vfs.dirty.clear();
         const dels = [];
@@ -207,6 +212,19 @@ export class Store {
             throw e;
         }
         this.lastError = null;
+    }
+
+    /** Play site: keep changes in the local encrypted cache only (never uploaded). */
+    async _flushLocal() {
+        const paths = [...vfs.dirty];
+        vfs.dirty.clear();
+        for (const p of paths) {
+            const id = await this.id(p);
+            const e = vfs.files.get(p);
+            if (!e) { await cacheDel(id); continue; }
+            await cachePut(id, { seq: 0, data: await encryptBlob(this.encKey, id, packFile(p, e)) });
+            this.pathById.set(id, p);
+        }
     }
 
     /** Upload one framed batch: [u16 idLen][id][u32 len][data]... */

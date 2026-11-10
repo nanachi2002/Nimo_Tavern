@@ -12,6 +12,10 @@ const BUILD = __NIMO_BUILD__;
 const STATIC_CACHE = 'nimo-static-' + BUILD;
 const DEFAULTS_CACHE = 'nimo-defaults-' + BUILD;
 const NIMO_SETTINGS = '/data/default-user/user/nimotavern.json';
+// play.<site> is the multiplayer site: a separate browser origin that never runs third-party code and never
+// writes to the shared encrypted storage (see store.js localOnly and app.js safe mode).
+const PLAY = self.location.hostname.toLowerCase().startsWith('play.');
+nimoState.play = PLAY;
 
 let appModule = null; // lazily imported so the SW installs fast
 let store = null;
@@ -67,6 +71,7 @@ function loadNimoSettings() {
             nimoState.relayEnabled = !!s.relayEnabled;
             nimoState.relayAlways = !!s.relayAlways;
             nimoState.optimizeImages = s.optimizeImages !== false; // on unless explicitly turned off
+            nimoState.extensionsConsent = !!s.extensionsConsent;
         }
     } catch { /* ignore */ }
 }
@@ -80,19 +85,20 @@ async function boot() {
     const T = [performance.now()]; const mark = (l) => { T.push(performance.now()); console.info(`[nimo boot] ${l}: ${Math.round(T[T.length - 1] - T[T.length - 2])}ms`); };
     await loadDefaults(); mark('defaults');
     appModule.initServerFiles();
-    store = new Store(keys);
+    store = new Store({ ...keys, localOnly: PLAY });
     store.onAuthError = () => lock(false);
     store.onPull = (got, total) => progress(`Downloading your encrypted tavern… ${mb(got)} / ${mb(total)}`);
     const cached = await store.loadFromCache(); mark(`cache (${cached} blobs)`);
     try { const n = await store.pull(); mark(`pull (${n} changes)`); } catch (e) { if (!cached) throw e; console.warn('[nimo] offline, using local cache', e); }
     let imported = false;
     const me = await fetch('/api/nimo/auth/me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
-    if (me.legacyPending) imported = await importLegacy(me.legacyPending);
+    if (me.legacyPending && !PLAY) imported = await importLegacy(me.legacyPending);
     appModule.ensureUserDirectories();
     if (!imported && !vfs.existsSync('/data/default-user/settings.json')) {
         await withRefRetry(() => appModule.seedContent());
     }
     loadNimoSettings();
+    if (!PLAY) cleanupMultiplayerCopies();
     // Warm up shared default files needed by the first screen (character cards, avatars).
     const warm = [];
     for (const [p, e] of vfs.files) if (!e.data && e.ref && /^\/data\/default-user\/(characters|User Avatars)\//.test(p)) warm.push(p);
@@ -101,6 +107,40 @@ async function boot() {
     nimoState.ready = true;
     vfs.listeners.add(scheduleFlush);
     startPeriodicSync();
+}
+
+// Multiplayer moved to its own site (play.*), where extensions can't run. Copies of multiplayer chats that were
+// saved in the shared storage before that (readable by extensions on the main site) are cleaned up once:
+// the session's metadata is removed, and so are the other players' messages. The sessions themselves are
+// untouched on the server and open on the play site. Players' session characters are removed by the
+// multiplayer extension (it can read character cards).
+function cleanupMultiplayerCopies() {
+    let settings = {};
+    try { settings = JSON.parse(vfs.readFileSync(NIMO_SETTINGS, 'utf8')); } catch { /* */ }
+    if (settings.mpMoved) return;
+    let mine = new Set();
+    try { mine = new Set(Object.values(JSON.parse(vfs.readFileSync('/data/default-user/settings.json', 'utf8'))?.power_user?.personas || {})); } catch { /* */ }
+    let n = 0;
+    for (const [p, e] of vfs.files) {
+        if (!p.startsWith('/data/default-user/chats/') || !p.endsWith('.jsonl') || !e.data) continue;
+        try {
+            const text = new TextDecoder().decode(e.data);
+            const nl = text.indexOf('\n');
+            const head = nl < 0 ? text : text.slice(0, nl);
+            if (!head.includes('"nimo_mp"')) continue;
+            const meta = JSON.parse(head);
+            if (!meta?.chat_metadata?.nimo_mp) continue;
+            delete meta.chat_metadata.nimo_mp;
+            const lines = nl < 0 ? [] : text.slice(nl + 1).split('\n').filter(Boolean);
+            const keep = lines.filter((l) => {
+                try { const m = JSON.parse(l); return !(m.is_user && m.extra?.nimo_mid && !mine.has(m.name)); } catch { return true; }
+            });
+            vfs.writeFileSync(p, [JSON.stringify(meta), ...keep].join('\n'));
+            n++;
+        } catch (err) { console.warn('[nimo] multiplayer cleanup skipped a chat', err); }
+    }
+    vfs.writeFileSync(NIMO_SETTINGS, JSON.stringify({ ...settings, mpMoved: 1 }));
+    if (n) console.info(`[nimo] removed multiplayer data from ${n} chat copies (multiplayer now lives on the play site)`);
 }
 
 // Mobile browsers (iOS especially) sometimes drop the first IndexedDB connection or the network while a Service Worker starts: try again before giving up.
@@ -364,7 +404,7 @@ async function handleLocal(request) {
         const keys = await loadKeys();
         if (!keys?.encKey) return json(200, { unlocked: false });
         try { await ensureBooted(); } catch (e) { return json(200, { unlocked: false, error: e.message }); }
-        return json(200, { unlocked: true, ready: nimoState.ready, username: nimoState.username, relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages, quota: store?.quota, pending: vfs.dirty.size });
+        return json(200, { unlocked: true, ready: nimoState.ready, username: nimoState.username, relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages, extensionsConsent: !!nimoState.extensionsConsent, play: PLAY, quota: store?.quota, pending: vfs.dirty.size });
     }
     if (url.pathname === '/api/nimo-local/settings' && request.method === 'POST') {
         await ensureBooted();
@@ -375,7 +415,10 @@ async function handleLocal(request) {
             nimoState.relayAlways = !!s.relayEnabled && !!s.relayAlways;
         }
         if ('optimizeImages' in s) nimoState.optimizeImages = !!s.optimizeImages;
-        vfs.writeFileSync(NIMO_SETTINGS, JSON.stringify({ relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages }));
+        if ('extensionsConsent' in s && !PLAY) nimoState.extensionsConsent = !!s.extensionsConsent;
+        let prev = {};
+        try { prev = JSON.parse(vfs.readFileSync(NIMO_SETTINGS, 'utf8')); } catch { /* */ }
+        vfs.writeFileSync(NIMO_SETTINGS, JSON.stringify({ ...prev, relayEnabled: nimoState.relayEnabled, relayAlways: nimoState.relayAlways, optimizeImages: nimoState.optimizeImages, extensionsConsent: nimoState.extensionsConsent }));
         await store.flush();
         return json(200, { ok: true });
     }

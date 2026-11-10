@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     expires_at  TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+-- Which site the login was made on: 'main' (the tavern, where extensions may run) or 'play' (play.*, the
+-- multiplayer site, which never runs third-party code). Multiplayer only accepts 'play' logins.
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'main';
 
 CREATE TABLE IF NOT EXISTS blobs (
     user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

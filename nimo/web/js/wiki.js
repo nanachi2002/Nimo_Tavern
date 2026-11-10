@@ -1,4 +1,5 @@
 // NimoTavern wiki: page chrome, search, animated demos and interactive widgets. No dependencies, no network calls except the search index.
+import { PROVIDED, bare, explain } from '../../shared/framework-modules.js';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -122,9 +123,21 @@ function initDemo(root) {
     let gen = 0, idx = -1, playing = false, visible = false;
 
     const q = (sel) => (sel ? stage.querySelector(sel) : null);
+    // Moves an absolutely positioned element (a "packet") onto the centre of another one. `instant` skips the glide.
+    function place(el, sel, instant) {
+        const to = q(sel);
+        if (!el || !to) return;
+        el.dataset.at = sel;
+        const s = stage.getBoundingClientRect(), r = to.getBoundingClientRect();
+        if (instant) el.style.transition = 'none';
+        el.style.transform = `translate(${r.left - s.left + r.width / 2}px, ${r.top - s.top + r.height / 2}px) translate(-50%, -50%)`;
+        if (instant) { void el.offsetWidth; el.style.transition = ''; }
+    }
+    const replace = () => stage.querySelectorAll('[data-at]').forEach((el) => place(el, el.dataset.at, true));
     function reset() {
         stage.innerHTML = initial; stage.append(pointer); pointer.classList.remove('show');
         pointer.style.transform = `translate(${stage.clientWidth * 0.5}px, ${stage.clientHeight * 0.9}px)`;
+        replace();
         idx = -1;
     }
     function setCap(i) {
@@ -169,6 +182,11 @@ function initDemo(root) {
         for (const [sel, cls] of Object.entries(s.rm || {})) cls.split(' ').forEach((c) => q(sel)?.classList.remove(c));
         for (const [sel, html] of Object.entries(s.set || {})) { const el = q(sel); if (el) el.innerHTML = html; }
         for (const [sel, v] of Object.entries(s.css || {})) { const el = q(sel); if (el) for (const [k, val] of Object.entries(v)) el.style.setProperty(k, val); }
+        for (const [sel, to] of Object.entries(s.put || {})) place(q(sel), to, true);
+        if (s.fly) {
+            for (const [sel, to] of Object.entries(s.fly)) place(q(sel), to, fast || reduced);
+            if (!fast) { await sleep(s.flyMs ?? 900); if (myGen !== gen) return; }
+        }
         if (s.act === 'type') await typeInto(q(s.into || s.at), s.text, fast, s.mask);
         if (s.act === 'stream') await stream(q(s.into || s.at), s.text, fast);
         if (myGen !== gen) return;
@@ -214,6 +232,8 @@ function initDemo(root) {
         if (!visible && playing) stop();
     }, { threshold: 0.45 }).observe(root);
     bar.addEventListener('pointerdown', () => { root.dataset.touched = '1'; });
+    // Packets are placed in pixels: put them back where they belong when the layout changes.
+    if (initial.includes('data-at')) new ResizeObserver(replace).observe(stage);
 }
 
 /* ---------------------------------------------------------------- widgets */
@@ -398,6 +418,99 @@ W.tour = (el) => {
         info.innerHTML = `<h4 style="margin:0 0 4px"><i class="${i.dataset.icon}" style="color:var(--SmartThemeQuoteColor)"></i> ${esc(i.dataset.tip)}</h4>${i.dataset.info}` + (i.dataset.link ? ` <a href="${i.dataset.link}">Read the full guide →</a>` : '');
     }));
     items[0]?.click();
+};
+
+// NimoFramework port check ---------------------------------------------------------
+W.portcheck = (el) => {
+    const SAMPLE = `import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'yaml';
+import { exec } from 'node:child_process';
+import { roll } from './lib/dice.js';
+
+export const info = { id: 'my-plugin', name: 'My plugin', description: 'Example' };
+
+export async function init(router) {
+    router.get('/config', (req, res) => {
+        const file = path.join(process.cwd(), 'plugins', 'my-plugin', 'config.yaml');
+        res.json(yaml.parse(fs.readFileSync(file, 'utf8')));
+    });
+    router.post('/roll', (req, res) => res.json({ result: roll(req.body.sides) }));
+    router.post('/run', (req, res) => exec('ls', (err, out) => res.send(out)));
+    setInterval(() => console.log('still alive'), 60000);
+}
+`;
+    el.innerHTML = `<h4><i class="fa-solid fa-stethoscope"></i> Port check</h4>
+<p class="sub">Paste your plugin's server file (the one with <code>init(router)</code>). The check runs in this page: nothing is uploaded. It reads the code as text, so treat the result as a guide, not a guarantee.</p>
+<textarea class="text_pole pc-in" rows="11" spellcheck="false" aria-label="Your plugin's server code"></textarea>
+<div class="pc-actions"><button type="button" class="menu_button" data-a="sample"><i class="fa-solid fa-flask"></i> Load the example</button><button type="button" class="menu_button" data-a="clear"><i class="fa-solid fa-eraser"></i> Clear</button></div>
+<div class="pc-out" aria-live="polite"></div>`;
+    const input = $('.pc-in', el), out = $('.pc-out', el);
+    const ICON = { ok: 'fa-circle-check', warn: 'fa-triangle-exclamation', no: 'fa-circle-xmark' };
+    const row = (lvl, head, text) => `<div class="pc-row ${lvl}"><i class="fa-solid ${ICON[lvl]}"></i><div><b>${head}</b><span>${text}</span></div></div>`;
+
+    function check() {
+        const raw = input.value;
+        if (!raw.trim()) { out.innerHTML = '<p class="nimo-muted">Paste some code above, or load the example.</p>'; return; }
+        const code = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
+        const mods = new Set();
+        const patterns = [
+            /\brequire\s*\(\s*(['"`])([^'"`]+)\1\s*\)/g,
+            /\bimport\s*\(\s*(['"`])([^'"`]+)\1\s*\)/g,
+            /\bimport\s+(?:[^'"()]*?\sfrom\s*)?(['"])([^'"]+)\1/g,
+            /\bexport\s+[^'"()=]*?\sfrom\s*(['"])([^'"]+)\1/g,
+        ];
+        for (const re of patterns) for (const m of code.matchAll(re)) mods.add(m[2]);
+        const esm = /^\s*(import\s*[\w{*'"]|export\s+(const|let|var|function|async|default|class|\{|\*))/m.test(code);
+
+        const rows = [];
+        let blocked = 0, bundle = esm;
+        for (const id of [...mods].sort((a, b) => bare(a).localeCompare(bare(b)))) {
+            const { kind, hint } = explain(id);
+            const name = `<code>${esc(id)}</code>`;
+            if (kind === 'provided') rows.push(row('ok', name, 'Provided by NimoFramework. Nothing to do.'));
+            else if (kind === 'impossible' || kind === 'node') { blocked++; rows.push(row('no', name, esc(hint))); }
+            else { bundle = true; rows.push(row('warn', name, esc(hint))); }
+        }
+
+        const notes = [];
+        const has = (re) => re.test(code);
+        if (esm) notes.push(row('warn', 'ES module syntax (<code>import</code> / <code>export</code>)', 'NimoFramework loads CommonJS. The build command below converts it for you; your source stays as it is.'));
+        if (has(/\.listen\s*\(/)) { blocked++; notes.push(row('no', '<code>.listen()</code>', 'A plugin cannot open a port. Register your routes on the <code>router</code> given to <code>init()</code>: they are served at <code>/api/plugins/&lt;id&gt;/</code>.')); }
+        if (has(/\bsetInterval\s*\(|\bcron\b/)) notes.push(row('warn', 'Background timer', 'The browser stops the Service Worker after about 30 seconds without requests, and your timer with it. Do the work when a request arrives, and keep state in <code>nimo.storage</code>.'));
+        if (has(/\bprocess\.env\b/)) notes.push(row('warn', '<code>process.env</code>', 'It is empty here: users have no environment variables. Keep settings in <code>nimo.storage</code> and let the user edit them in your extension\'s UI.'));
+        if (has(/\b__dirname\b|\b__filename\b|process\.cwd\s*\(|import\.meta/)) notes.push(row('warn', 'Paths on disk (<code>__dirname</code>, <code>process.cwd()</code>, <code>import.meta</code>)', 'The folder layout is different. Use <code>nimo.dataDir</code> for data you write and <code>nimo.extensionDir</code> for files shipped in your repository.'));
+        if (has(/\bnew\s+(WebSocketServer|Server)\b/)) { blocked++; notes.push(row('no', 'Socket server', 'A browser cannot accept connections. Use normal routes, or streaming with <code>res.write()</code>.')); }
+        if (!has(/\binfo\b\s*[=:]|exports\.info\b/)) notes.push(row('warn', 'No <code>info</code> found', 'Export <code>info = { id, name, description }</code>, the same object SillyTavern asks for.'));
+        else {
+            const id = code.match(/\bid\s*:\s*(['"`])([^'"`]*)\1/)?.[2];
+            if (id !== undefined && !/^[a-z0-9_-]+$/.test(id)) notes.push(row('no', `Plugin id <code>${esc(id)}</code>`, 'An id may only contain lowercase letters, digits, <code>-</code> and <code>_</code>.'));
+            if (id === 'list' || id === 'status') notes.push(row('no', `Plugin id <code>${esc(id)}</code>`, 'This id is reserved by NimoFramework. Pick another one.'));
+        }
+        if (!has(/\binit\b/)) notes.push(row('warn', 'No <code>init</code> found', 'Export <code>init(router)</code> and register your routes in it.'));
+
+        let verdict;
+        if (blocked) verdict = `<div class="pc-verdict no"><i class="fa-solid fa-circle-xmark"></i><div><b>${blocked} thing${blocked > 1 ? 's' : ''} to change first</b><span>The red lines cannot work in a browser. Each one says what to use instead. Everything else can stay.</span></div></div>`;
+        else if (bundle) verdict = '<div class="pc-verdict warn"><i class="fa-solid fa-box"></i><div><b>Portable, with one build step</b><span>Bundle your code and its packages into a single CommonJS file with the command below.</span></div></div>';
+        else verdict = '<div class="pc-verdict ok"><i class="fa-solid fa-circle-check"></i><div><b>No build needed</b><span>Copy this file into your extension\'s repository and point <code>"nimo": { "framework": 1, "server": "…" }</code> at it.</span></div></div>';
+        const cmd = bundle ? '<p class="pc-cmd-t">Build command (run it in your plugin\'s folder, then commit <code>server.cjs</code>):</p><div class="pc-cmd"><code>npx esbuild src/index.js --bundle --platform=node --format=cjs --external:express --external:node-fetch --outfile=server.cjs</code></div>' : '';
+        out.innerHTML = verdict + (rows.length ? '<h5>Modules</h5>' + rows.join('') : '') + (notes.length ? '<h5>Code patterns</h5>' + notes.join('') : '') + cmd
+            + `<p class="nimo-muted pc-foot">${mods.size} module${mods.size === 1 ? '' : 's'} found. NimoFramework provides ${PROVIDED.length} of them out of the box: see <a href="#modules-you-can-require">the list</a>.</p>`;
+    }
+    input.addEventListener('input', check);
+    el.addEventListener('click', (e) => {
+        const a = e.target.closest('[data-a]')?.dataset.a;
+        if (a === 'sample') input.value = SAMPLE;
+        if (a === 'clear') input.value = '';
+        if (a) check();
+    });
+    input.value = SAMPLE; check();
+};
+
+// The list of modules a plugin can require(), always in step with the framework.
+W.fwmodules = (el) => {
+    el.classList.remove('widget');
+    el.innerHTML = PROVIDED.map((m) => `<code>${esc(m)}</code>`).join(' ');
 };
 
 function widgets() { for (const el of $$('[data-widget]')) { try { W[el.dataset.widget]?.(el); } catch (e) { console.warn('widget', e); } } }

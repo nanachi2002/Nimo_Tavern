@@ -103,7 +103,8 @@ Everything you'd use in a local SillyTavern works, because it *is* SillyTavern's
 
 NimoTavern's own feature: **up to 6 players**, each with their own persona, roleplay with one AI character **turn by turn**, like a tabletop game. Players can be online together or take their turns at their own pace.
 
-- **Hosting:** the host turns any chat into a session from the chat options menu. They set the world setting, the lorebooks, the turn rules (ordered rounds, free rounds or strict alternation, with an optional turn timer) and a **separate AI connection just for multiplayer**.
+- **Its own site:** multiplayer runs on **play.nimorp.lol**, with its own login. To the browser that's a separate website, so extensions installed on the main site can never load there or see the sessions.
+- **Hosting:** the host starts a session from any chat, from the chat options menu. They set the world setting, the lorebooks, the turn rules (ordered rounds, free rounds or strict alternation, with an optional turn timer) and a **separate AI connection just for multiplayer**.
 - **Joining:** friends are invited by username. The invite lands in their **Account → Mailbox**, with a badge on the Account button. Accepting adds the session to their character list like any other chat.
 - **What players see:** only what's on screen. The character definition, world setting, lorebooks and API key stay with the host.
 
@@ -114,12 +115,23 @@ NimoTavern's own feature: **up to 6 players**, each with their own persona, role
 > [!WARNING]
 > **Multiplayer is not end-to-end encrypted.** To run the AI for the whole group, even when the host is offline, the server reads the session while it writes the prompt, using the host's multiplayer key. Sessions are encrypted at rest with their own key, never logged, and deleted when the host ends them (or after 90 days without activity). Solo chats don't change: they stay end-to-end encrypted. [Details](https://nimorp.lol/privacy#multiplayer)
 
+## Extensions and NimoFramework
+
+- **Third-party extensions** install from their GitHub address, like on SillyTavern.
+  - The browser downloads them straight from GitHub, so our server never sees which ones you install.
+  - They're stored encrypted with the rest of your tavern.
+  - They run only in your browser, with access to your own data, never to other users or the server. Users accept a clear warning before the first install.
+- **Server plugins** (Node.js) never run on our shared server. Creators can port them to **[NimoFramework](nimo/framework/README.md)**:
+  - The plugin's backend runs in each user's browser, with the same `/api/plugins/<id>/` routes.
+  - The framework provides an Express-style router, the user's encrypted files, a per-plugin store, and fetch with the opt-in relay.
+  - There's a working example in [`nimo/framework/example`](nimo/framework/example).
+
 ### Limitations, honestly
 
 - **You trust the code that's served to you**, like with any web app. The code is public here, so you can check what it does ([how to verify it](https://nimorp.lol/wiki/verify)).
 - **Your AI provider sees your prompts.** That's unavoidable with any frontend.
 - **Some providers block requests from browsers.** For those, there's an **optional relay**, which is off by default. With it on, that request passes through the server's memory without being logged or stored, but you trust the server for that request.
-- **Server-side ML features** (vector storage, captioning, classification) are disabled, and third-party extensions that need a server-side install aren't available.
+- **Server-side ML features** (vector storage, captioning, classification) are disabled. Server plugins only work once ported to NimoFramework.
 - If you can run SillyTavern on your own computer, that's still the most private option. NimoTavern is for when you can't, or when you want your tavern on every device.
 
 ## Running your own

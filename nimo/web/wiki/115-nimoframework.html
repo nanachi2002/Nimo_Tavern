@@ -1,0 +1,364 @@
+<!--TITLE NimoFramework -->
+<!--ICON fa-solid fa-plug-circle-bolt -->
+<!--GROUP Shape the AI -->
+<!--DESC For extension creators: port a SillyTavern server plugin so it runs on NimoTavern, in each user's own browser. Same routes, same code shape, usually one build command. -->
+<p><b>NimoFramework</b> lets a SillyTavern <b>server plugin</b> (the Node.js part some extensions need) run on NimoTavern. Your plugin keeps the same shape (<code>info</code>, <code>init(router)</code>, <code>exit()</code>) and the same URLs (<code>/api/plugins/&lt;id&gt;/…</code>). The difference is <b>where</b> it runs: in the browser of the person who installed it, never on NimoTavern's server.</p>
+<p>If you're a user and an extension you like needs a server plugin, send its author this page.</p>
+
+<div class="callout tip"><i class="fa-solid fa-bolt"></i><div><strong class="t">At a glance</strong>
+<p><b>1.</b> Add one line to your extension's <code>manifest.json</code>: <code>"nimo": { "framework": 1, "server": "server.cjs" }</code>.</p>
+<p><b>2.</b> Put your plugin in <code>server.cjs</code> as one CommonJS file. Already one plain CommonJS file? Nothing to build. Otherwise, one <code>esbuild</code> command does it.</p>
+<p><b>3.</b> Commit, push, install from GitHub on NimoTavern. Your UI's <code>fetch('/api/plugins/&lt;id&gt;/…')</code> calls work unchanged.</p>
+<p>Not sure your plugin can be ported? Paste it into the <a href="#check-your-plugin">port check</a> below.</p></div></div>
+
+<h2>The idea in 30 seconds</h2>
+<p>On regular SillyTavern your plugin runs in Node, on the machine that hosts SillyTavern. On NimoTavern, SillyTavern's own server code already runs <b>inside each user's browser</b>, in a Service Worker that decrypts their files locally. NimoFramework loads your plugin there, next to it. Watch a request travel:</p>
+
+<!--nosearch-->
+<div class="demo" data-title="Where your plugin runs">
+<div class="demo-stage"><div class="fw-arch">
+<div class="fw-zone you"><span class="lbl"><i class="fa-solid fa-laptop"></i> The user's browser</span>
+    <div class="fw-node js-ui"><b><i class="fa-solid fa-window-maximize"></i> Your extension's UI</b><small>index.js, running in the page like on SillyTavern</small><div class="fw-code js-call" data-hide>fetch('/api/plugins/my-plugin/hello')</div><div class="fw-code js-result" data-hide>→ Hello, Mira!</div></div>
+    <div class="fw-node js-sw"><b><i class="fa-solid fa-gears"></i> Service Worker</b><small>SillyTavern's server code + NimoFramework</small>
+        <div class="chips"><span class="fw-chip js-plugin"><i class="fa-solid fa-plug"></i> your server.cjs</span><span class="fw-chip js-files"><i class="fa-solid fa-folder-open"></i> the user's files (decrypted here)</span></div></div>
+</div>
+<div class="fw-zone srv"><span class="lbl"><i class="fa-solid fa-server"></i> NimoTavern's server</span>
+    <div class="fw-node js-srv"><b><i class="fa-solid fa-lock"></i> Encrypted blobs</b><small>Stores what it can't read. Runs no one's code.</small><div class="fw-blob"><span>a91f 03c7 e2…</span><span>5d0b 77fa 1e…</span></div></div>
+    <div class="fw-no js-others" data-hide><i class="fa-solid fa-user-slash"></i> Other users: separate browsers, separate keys. Out of reach.</div>
+</div>
+</div>
+<div class="fw-pkt gone js-pkt" data-at=".js-ui">GET /hello</div>
+<div class="fw-pkt enc gone js-pkt2" data-at=".js-files"><i class="fa-solid fa-lock"></i> a91f…</div>
+</div>
+<script type="application/json" class="steps">[
+ {"say":"Your extension's UI runs in the page, exactly like on SillyTavern. It calls its backend with a normal fetch.","add":{".js-ui":"lit"},"show":[".js-call"],"wait":1700},
+ {"say":"The request never leaves the browser: NimoTavern's Service Worker answers it, like SillyTavern's server would.","rm":{".js-pkt":"gone",".js-ui":"lit"},"add":{".js-sw":"lit"},"fly":{".js-pkt":".js-sw"},"wait":1200},
+ {"say":"NimoFramework passes it to your server.cjs, mounted at /api/plugins/my-plugin/.","rm":{".js-sw":"lit"},"add":{".js-plugin":"lit"},"fly":{".js-pkt":".js-plugin"},"wait":1200},
+ {"say":"Your plugin reads and writes the user's files with fs or nimo.storage. They're decrypted right here, in the user's browser.","rm":{".js-plugin":"lit"},"add":{".js-files":"lit"},"fly":{".js-pkt":".js-files"},"wait":1400},
+ {"say":"The answer goes back to your UI. The whole trip stayed inside one browser.","rm":{".js-files":"lit"},"add":{".js-pkt":"back",".js-ui":"lit"},"set":{".js-pkt":"200 {hello:\"Mira\"}"},"fly":{".js-pkt":".js-ui"},"after":{"show":[".js-result"]},"wait":1600},
+ {"say":"Changed files are encrypted before they're saved. NimoTavern's server only ever sees blobs it can't read.","add":{".js-pkt":"gone",".js-srv":"lit"},"rm":{".js-ui":"lit",".js-pkt2":"gone"},"fly":{".js-pkt2":".js-srv"},"flyMs":1000,"wait":1500},
+ {"say":"Your plugin can reach the data of the person who installed it, and nobody else's.","add":{".js-pkt2":"gone"},"rm":{".js-srv":"lit"},"show":[".js-others"],"wait":2200}
+]</script></div>
+<!--/nosearch-->
+
+<div class="wg-split">
+<div class="callout secure"><i class="fa-solid fa-circle-check"></i><div><strong class="t">Your plugin can</strong>
+<p>Register routes, read the request, stream answers. Read and write the user's files (characters, chats, settings…). Store its own data. Call websites and AI providers the way the user's browser can.</p></div></div>
+<div class="callout danger"><i class="fa-solid fa-ban"></i><div><strong class="t">Your plugin can't</strong>
+<p>Start programs, use native addons, open ports or raw sockets, run in the background on its own, or reach other users. It never runs on the multiplayer site.</p></div></div>
+</div>
+
+<h3>Why not just run plugins on the server?</h3>
+<p>On your own PC, a server plugin is your business. NimoTavern's server is shared by everyone: a plugin there would run next to every other account, so one buggy or malicious plugin could read other people's data or take the site down. And NimoTavern can't read anyone's data by design, so it couldn't give a plugin your files anyway. That's why NimoTavern never runs anyone's code on its server, and this won't change. Running your plugin in the user's browser keeps all of that true.</p>
+
+<h2>Quick start (5 minutes)</h2>
+<p>Here's a complete, working extension with a backend. It is also in the NimoTavern repository: <a href="https://github.com/nanachi2002/Nimo_Tavern/tree/main/nimo/framework/example" target="_blank" rel="noopener">nimo/framework/example</a>. You can install that URL directly to try it.</p>
+<div class="wk-tree">my-extension/
+├── manifest.json   <span class="c">← one extra line</span>
+├── index.js        <span class="c">← your UI, unchanged</span>
+├── style.css
+└── <span class="new">server.cjs</span>      <span class="c">← your plugin, as one CommonJS file</span></div>
+<ol class="steps">
+    <li><b>Declare the server file in <code>manifest.json</code></b>
+        <p>Regular SillyTavern ignores the <code>nimo</code> field, so the same manifest works everywhere.</p>
+        <pre><code>{
+    "display_name": "My extension",
+    "js": "index.js",
+    "css": "style.css",
+    "author": "You",
+    "version": "1.0.0",
+    "nimo": { "framework": 1, "server": "server.cjs" }
+}</code></pre></li>
+    <li><b>Write <code>server.cjs</code></b>
+        <p>The same shape SillyTavern loads from its <code>plugins/</code> folder. <code>info.id</code> becomes the URL: <code>/api/plugins/my-plugin/</code>.</p>
+        <pre><code>module.exports = {
+    info: { id: 'my-plugin', name: 'My plugin', description: 'Says hello and counts.' },
+
+    async init(router) {
+        router.post('/probe', (req, res) =&gt; res.sendStatus(204));   // "is my backend there?"
+
+        router.get('/hello', (req, res) =&gt; {
+            res.json({ hello: nimo.user.name });
+        });
+
+        router.post('/count', (req, res) =&gt; {
+            const count = nimo.storage.get('count', 0) + 1;
+            nimo.storage.set('count', count);                       // encrypted and synced
+            res.json({ count });
+        });
+    },
+
+    async exit() {},
+};</code></pre></li>
+    <li><b>Call it from your UI</b>
+        <p>Exactly what you'd write for SillyTavern. Use SillyTavern's <code>getRequestHeaders()</code> as usual; it works on NimoTavern too.</p>
+        <pre><code>import { getRequestHeaders } from '../../../../script.js';
+
+const API = '/api/plugins/my-plugin';
+const r = await fetch(API + '/hello', { headers: getRequestHeaders() });
+const { hello } = await r.json();
+toastr.info(`The plugin says hello to ${hello}`);</code></pre></li>
+    <li><b>Push and install</b>
+        <p>Commit everything, <b>including <code>server.cjs</code></b>, and push to GitHub. On NimoTavern: <i class="fa-solid fa-cubes"></i> Extensions → <b>Install extension</b> → paste <code>https://github.com/you/my-extension</code>. Your plugin starts on the first request to <code>/api/plugins/</code>.</p></li>
+</ol>
+
+<h2>Porting an existing plugin</h2>
+<p>Most plugins port with no code changes. What you need to do depends on how your plugin is written:</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Your plugin is…</th><th>What to do</th></tr>
+<tr><td>One CommonJS file that only uses <a href="#modules-you-can-require">provided modules</a></td><td><span class="badge ok">Nothing to build</span> Copy it into your extension as <code>server.cjs</code>.</td></tr>
+<tr><td>ES modules (<code>import</code>/<code>export</code>), several files, or npm packages</td><td><span class="badge warn">One build command</span> Bundle it with esbuild (below).</td></tr>
+<tr><td>Uses <code>child_process</code>, native addons, sockets…</td><td><span class="badge no">Change those parts</span> See <a href="#limits">limits</a>: each has a browser-friendly replacement.</td></tr>
+</table></div>
+
+<h3>Bundling with esbuild</h3>
+<p>esbuild packs your files and their npm packages into one CommonJS file. Run it in your plugin's folder:</p>
+<pre><code>npx esbuild src/index.js --bundle --platform=node --format=cjs --external:express --external:node-fetch --outfile=server.cjs</code></pre>
+<ul>
+    <li><code>--platform=node</code> keeps Node built-ins (<code>fs</code>, <code>path</code>, <code>node:crypto</code>…) as <code>require()</code> calls. NimoFramework provides them.</li>
+    <li><code>--format=cjs</code> turns <code>export const info</code> / <code>export async function init</code> into <code>module.exports</code>. NimoFramework finds them there (a <code>default</code> export works too).</li>
+    <li><code>--external:express --external:node-fetch</code> uses the versions NimoFramework (and SillyTavern) already have, instead of bundling copies.</li>
+</ul>
+<p>Make it a script so you never retype it:</p>
+<pre><code>{
+    "scripts": {
+        "build": "esbuild src/index.js --bundle --platform=node --format=cjs --external:express --external:node-fetch --outfile=server.cjs"
+    },
+    "devDependencies": { "esbuild": "^0.24.0" }
+}</code></pre>
+<div class="callout warn"><i class="fa-solid fa-code-commit"></i><div><strong class="t">Commit the built file</strong>
+<p>NimoTavern installs straight from GitHub and doesn't build anything. If <code>server.cjs</code> is in your <code>.gitignore</code>, users get the error <i>"manifest.json points to "server.cjs", but that file is not in the repository"</i>.</p></div></div>
+
+<h3>Before and after</h3>
+<div class="tabs">
+<div class="tab" data-label="Before (SillyTavern plugin)">
+<pre><code>// plugins/my-plugin/index.mjs
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'yaml';
+
+export const info = { id: 'my-plugin', name: 'My plugin', description: '…' };
+
+export async function init(router) {
+    const file = path.join(process.cwd(), 'plugins', 'my-plugin', 'presets.yaml');
+    router.get('/presets', (req, res) =&gt; {
+        res.json(yaml.parse(fs.readFileSync(file, 'utf8')));
+    });
+}</code></pre></div>
+<div class="tab" data-label="After (works on both)">
+<pre><code>// src/index.js, built to server.cjs
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'yaml';                 // bundled by esbuild
+
+export const info = { id: 'my-plugin', name: 'My plugin', description: '…' };
+
+// On NimoTavern, files you ship live in nimo.extensionDir.
+const here = typeof nimo !== 'undefined'
+    ? nimo.extensionDir
+    : path.join(process.cwd(), 'plugins', 'my-plugin');
+
+export async function init(router) {
+    const file = path.join(here, 'presets.yaml');
+    router.get('/presets', (req, res) =&gt; {
+        res.json(yaml.parse(fs.readFileSync(file, 'utf8')));
+    });
+}</code></pre></div>
+<div class="tab" data-label="What changed">
+<ul>
+    <li>Only the path to the shipped file: <code>process.cwd()</code> means nothing in a browser, <code>nimo.extensionDir</code> is where your repository's files are.</li>
+    <li><code>typeof nimo !== 'undefined'</code> tells you which one you're on, so <b>one codebase</b> serves both. The built <code>server.cjs</code> also runs as a regular SillyTavern plugin: copy it to SillyTavern's <code>plugins/</code> folder.</li>
+    <li>The <code>yaml</code> package is bundled by esbuild. <code>fs</code> and <code>path</code> come from NimoFramework.</li>
+</ul></div>
+</div>
+
+<h3>Check your plugin</h3>
+<!--nosearch-->
+<div data-widget="portcheck" class="widget"></div>
+<!--/nosearch-->
+
+<h2>What your plugin can use</h2>
+<h3>Modules you can require</h3>
+<p>These work with <code>require()</code> (with or without the <code>node:</code> prefix) and need no bundling:</p>
+<!--nosearch--><div data-widget="fwmodules" class="widget fw-mods"></div><!--/nosearch-->
+<div class="wk-tablewrap"><table>
+<tr><th>Module</th><th>How it behaves here</th></tr>
+<tr><td><code>express</code></td><td><code>Router()</code> with <code>get/post/put/patch/delete/all/use</code>, route parameters, and sub-routers. <code>express.json()</code> and friends exist but do nothing: bodies are already parsed (see below).</td></tr>
+<tr><td><code>fs</code>, <code>fs/promises</code></td><td>The user's own files, decrypted in their browser. Sync, callback and promise styles all work. Every write is encrypted and synced to the user's other devices.</td></tr>
+<tr><td><code>path</code></td><td>POSIX paths (<code>/</code>). Paths look like <code>/data/default-user/…</code>.</td></tr>
+<tr><td><code>node-fetch</code></td><td>The browser's <code>fetch</code>, plus the opt-in relay. See <a href="#calling-other-websites">Calling other websites</a>.</td></tr>
+<tr><td><code>crypto</code></td><td><code>randomUUID</code>, <code>randomBytes</code>, <code>createHash</code> and <code>createHmac</code> (sha1, sha256, sha512, md5). For anything heavier, use <code>crypto.subtle</code> (Web Crypto), which is available too.</td></tr>
+<tr><td><code>buffer</code>, <code>events</code>, <code>stream</code>, <code>stream/promises</code>, <code>string_decoder</code>, <code>util</code>, <code>url</code>, <code>querystring</code></td><td>Standard browser ports of the Node modules.</td></tr>
+<tr><td><code>readline</code></td><td><code>createInterface({ input })</code> over a stream, to read lines (<code>'line'</code> events or <code>for await</code>).</td></tr>
+<tr><td><code>assert</code>, <code>timers</code>, <code>timers/promises</code>, <code>perf_hooks</code>, <code>console</code>, <code>tty</code>, <code>os</code>, <code>process</code></td><td>Small versions. <code>os.platform()</code> is <code>'linux'</code>, <code>process.env</code> is empty, <code>process.cwd()</code> is <code>'/srv'</code>, <code>process.exit()</code> throws.</td></tr>
+</table></div>
+<p>Anything else: if it's a pure-JavaScript npm package, bundle it. If it needs native code or the operating system, see <a href="#limits">limits</a>.</p>
+
+<h3>The nimo object</h3>
+<p>A global that only exists on NimoTavern, so <code>typeof nimo !== 'undefined'</code> tells you where you are.</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Property</th><th>What it is</th></tr>
+<tr><td><code>nimo.version</code></td><td>The NimoFramework version, currently <code>1</code>. If your manifest asks for a newer one, the user is told to wait for an update.</td></tr>
+<tr><td><code>nimo.user.name</code></td><td>The user's NimoTavern username.</td></tr>
+<tr><td><code>nimo.storage.get(key, fallback)</code><br><code>.set(key, value)</code><br><code>.delete(key)</code><br><code>.keys()</code></td><td>A small JSON key/value store just for your plugin. Synchronous, encrypted, synced across the user's devices. Values must be JSON-compatible.</td></tr>
+<tr><td><code>nimo.dataDir</code></td><td>A folder for your plugin's own files, if you prefer <code>fs</code> (for example big or many files). Create it with <code>fs.mkdirSync(nimo.dataDir, { recursive: true })</code>.</td></tr>
+<tr><td><code>nimo.extensionDir</code></td><td>Where your extension is installed: read files you ship in your repository from here.</td></tr>
+<tr><td><code>nimo.fetch(url, options)</code></td><td>Same as <code>require('node-fetch')</code>.</td></tr>
+<tr><td><code>nimo.relay</code></td><td><code>true</code> when the user turned on NimoTavern's opt-in relay.</td></tr>
+</table></div>
+
+<h3>Requests and responses</h3>
+<div class="wk-tablewrap"><table>
+<tr><th>You get</th><th>Details</th></tr>
+<tr><td><code>req.body</code></td><td>Already parsed. JSON → object. <code>multipart/form-data</code> → its text fields. URL-encoded forms → object. <b>Anything else arrives as a string</b>: to send binary data, use multipart or base64 inside JSON.</td></tr>
+<tr><td><code>req.file</code></td><td>The first uploaded file of a multipart request, like multer gives you: <code>{ fieldname, originalname, mimetype, size, path }</code>. Read it with <code>fs.readFileSync(req.file.path)</code>.</td></tr>
+<tr><td><code>req.query</code>, <code>req.params</code>, <code>req.headers</code>, <code>req.get()</code>, <code>req.method</code>, <code>req.path</code></td><td>As in Express.</td></tr>
+<tr><td><code>req.user.directories</code></td><td>SillyTavern's folders for this user: <code>characters</code>, <code>chats</code>, <code>worlds</code>, <code>extensions</code>, <code>backgrounds</code>, <code>files</code>… Use these rather than hard-coded paths.</td></tr>
+<tr><td><code>res.json()</code>, <code>send()</code>, <code>status()</code>, <code>sendStatus()</code>, <code>set()</code>, <code>type()</code>, <code>sendFile()</code>, <code>download()</code>, <code>redirect()</code></td><td>As in Express.</td></tr>
+<tr><td><code>res.write()</code> + <code>res.end()</code></td><td>Streaming works: each <code>write()</code> reaches the page as it happens (good for AI-style streamed text).</td></tr>
+</table></div>
+
+<h2>Storing data</h2>
+<p>Everything your plugin writes, with <code>nimo.storage</code> or <code>fs</code>, is encrypted in the user's browser and saved like the rest of their tavern. It's on their other devices after a sync, and NimoTavern can't read it.</p>
+<ul>
+    <li><b>Settings and small state:</b> <code>nimo.storage</code>. No paths to think about.</li>
+    <li><b>Files:</b> <code>fs</code> in <code>nimo.dataDir</code>. Keep them reasonably small: each change is encrypted and uploaded.</li>
+    <li><b>Don't rely on memory.</b> The browser stops the Service Worker when it's idle, and your plugin with it. Anything only in a variable is gone after that (see <a href="#lifecycle">lifecycle</a>).</li>
+</ul>
+
+<h2>Calling other websites</h2>
+<p>Your plugin calls websites from the user's browser, so the browser's rules apply: the site must allow cross-origin requests (<b>CORS</b>). Most AI providers do. When a site doesn't, the request fails with:</p>
+<pre><code>Request to api.example.com failed: Failed to fetch. This provider blocked a direct browser request (CORS). You can enable the optional NimoTavern relay in User Settings &gt; NimoTavern Privacy.</code></pre>
+<ul>
+    <li>If the user turned on the <a href="/wiki/connect-ai#the-optional-relay">opt-in relay</a>, <code>fetch</code> retries through it automatically. Check <code>nimo.relay</code> to adapt your UI or messages.</li>
+    <li>Requests carry no cookies (<code>credentials: 'omit'</code>). Pass API keys in headers, as you would from Node.</li>
+    <li>Addresses on the user's own network (<code>localhost</code>, <code>192.168.…</code>) work if that service allows CORS. They're never sent to the relay.</li>
+</ul>
+
+<h2>Detecting NimoTavern</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>Where</th><th>How</th></tr>
+<tr><td>In <code>server.cjs</code></td><td><code>typeof nimo !== 'undefined'</code></td></tr>
+<tr><td>In your UI</td><td><code>window.NimoTavern?.framework</code> is the framework version (<code>1</code>), <code>undefined</code> on SillyTavern.</td></tr>
+<tr><td>Is my backend running?</td><td>SillyTavern's usual convention: give your plugin a <code>POST /probe</code> route that answers <code>204</code>, and call it from your UI. It works on both.</td></tr>
+<tr><td>Everything NimoFramework loaded</td><td><code>GET /api/plugins/status</code> (NimoTavern only): versions, loaded plugins, their routes, and errors.</td></tr>
+</table></div>
+
+<h2>Debugging</h2>
+<p>When the server part of an extension can't start, the rest of the extension still loads, and NimoTavern tells the user and you why:</p>
+<ul>
+    <li><b>A red toast</b> names the extension and gives the reason, with a link to this section.</li>
+    <li><b>The browser console</b> (<kbd>F12</kbd> → Console) shows lines starting with <code>[NimoFramework]</code>: what loaded, at which URL, and every error with its stack. Your plugin's own <code>console.log</code> lines appear there too, tagged with your extension's folder name, like <code>[my-extension] …</code>.</li>
+    <li><b><code>/api/plugins/status</code></b> lists loaded plugins with their routes, and the errors.</li>
+</ul>
+
+<!--nosearch-->
+<div class="demo tall" data-title="Fix, push, update: the dev loop">
+<div class="demo-stage"><div class="fw-loop">
+<div class="mk">{{include:topbar}}<div class="mk-body">
+    <div class="mk-chat"><div class="mk-msg"><div class="av">M</div><div><div class="nm">Captain Mira</div><div class="tx">“Ready when you are.”</div></div></div></div>
+    <div class="mk-toast err js-err" data-hide><b>Extension "my-extension": its server part could not start</b>server.cjs is an ES module (it uses import/export)…<small>Details for its author: NimoFramework guide</small></div>
+    <div class="mk-drawer right js-drawer" data-hide><h5><i class="fa-solid fa-cubes"></i> Manage extensions</h5>
+        <div class="mk-ext"><span>My extension <small>v1.0.0</small></span><span class="menu_button js-upd"><i class="fa-solid fa-download"></i> Update</span></div>
+        <div class="mk-ext"><span>Memory Books <small>v3.2.1</small></span><small>Up to date</small></div></div>
+    <div class="mk-toast js-ok" data-hide>Extension updated. Reload the page to load the new interface.</div>
+</div></div>
+<div class="fw-side">
+    <div class="fw-term"><div class="hd"><i class="fa-solid fa-terminal"></i> Terminal</div><div class="bd">
+        <div class="ln js-t1"></div><div class="ok js-t1o" data-hide>server.cjs  12.4kb ⚡ Done in 18ms</div>
+        <div class="ln js-t2"></div><div class="dim js-t2o" data-hide>main → main (pushed)</div></div></div>
+    <div class="fw-cons"><div class="hd"><i class="fa-solid fa-bug"></i> Browser console (F12)</div><div class="bd">
+        <div class="ln err js-c1" data-hide>[NimoFramework] the server part of "my-extension" could not start: server.cjs is an ES module… Guide: /wiki/nimoframework#debugging</div>
+        <div class="ln info js-c2" data-hide>[NimoFramework] loaded "my-plugin" from the extension "my-extension": /api/plugins/my-plugin/</div>
+        <div class="ln log js-c3" data-hide>[my-extension] 3 presets loaded</div></div></div>
+</div>
+</div></div>
+<script type="application/json" class="steps">[
+ {"say":"You installed your extension, but something's wrong: a red toast names the extension and says why its server part didn't start.","show":[".js-err"],"wait":2400},
+ {"say":"The same message is in the browser console (F12), with the full details.","show":[".js-c1"],"wait":1800},
+ {"say":"Here the file still uses import/export. Bundle it to CommonJS with esbuild…","at":".js-t1","act":"type","text":"npm run build","after":{"show":[".js-t1o"]},"wait":1200},
+ {"say":"…then commit the built file and push it to GitHub.","at":".js-t2","act":"type","text":"git commit -am \"CJS build\" && git push","after":{"show":[".js-t2o"]},"wait":1200},
+ {"say":"Back in NimoTavern: Extensions → Manage extensions.","at":".js-ext","act":"click","hide":[".js-err"],"show":[".js-drawer"],"wait":1000},
+ {"say":"Update downloads the new version from GitHub.","at":".js-upd","act":"click","show":[".js-ok"],"set":{".js-upd":"<i class=\"fa-solid fa-check\"></i> Updated"},"wait":1500},
+ {"say":"The server part restarts by itself on the next request. The console confirms where it's mounted.","hide":[".js-drawer"],"show":[".js-c2"],"wait":2000},
+ {"say":"Your own console.log lines show up too, tagged with your extension's folder.","show":[".js-c3"],"hide":[".js-ok"],"wait":2400}
+]</script></div>
+<!--/nosearch-->
+
+<h3>Error messages and what to do</h3>
+<div class="wk-tablewrap"><table>
+<tr><th>Message</th><th>Fix</th></tr>
+<tr><td><i>… is an ES module (it uses import/export)</i></td><td>Bundle with the <a href="#bundling-with-esbuild">esbuild command</a> (<code>--format=cjs</code>), or switch to <code>require</code> / <code>module.exports</code>.</td></tr>
+<tr><td><i>require("X") is not available in NimoFramework</i></td><td>The message continues with what to do: bundle a pure-JavaScript package, or the browser replacement for a Node-only module. The <a href="#check-your-plugin">port check</a> lists them all.</td></tr>
+<tr><td><i>manifest.json points to "server.cjs", but that file is not in the repository</i></td><td>Commit the built file (check your <code>.gitignore</code>) and update the extension.</td></tr>
+<tr><td><i>"nimo.server" must be the name of your server file</i> / <i>must point to a file inside the extension</i></td><td>Use a relative file name like <code>"server.cjs"</code> or <code>"server/index.cjs"</code>.</td></tr>
+<tr><td><i>has a syntax error</i></td><td>Run <code>node --check server.cjs</code> locally to see the line.</td></tr>
+<tr><td><i>module.exports.info is missing</i> / <i>info.name is missing</i> / <i>module.exports.init is not a function</i></td><td>Export <code>info: { id, name, description }</code> and <code>init(router)</code>, the same shape SillyTavern requires.</td></tr>
+<tr><td><i>info.id must be made of lowercase letters, digits, "-" or "_"</i></td><td>Same rule as SillyTavern. <code>list</code> and <code>status</code> are reserved.</td></tr>
+<tr><td><i>another installed extension already uses the plugin id "X"</i></td><td>Two extensions declare the same id. Pick a more specific one.</td></tr>
+<tr><td><i>init() did not finish after 20 seconds</i></td><td>Don't wait for slow work in <code>init</code>: register routes first, then load lazily on the first request.</td></tr>
+<tr><td><i>it needs NimoFramework N, this NimoTavern has version 1</i></td><td>Your manifest asks for a newer framework than the site has.</td></tr>
+</table></div>
+<p>Answers your UI may see from <code>/api/plugins/…</code>:</p>
+<ul>
+    <li><b>404</b> <i>No plugin "my-plugin" is loaded. The plugin in "my-extension" could not start: …</i> The reason is included.</li>
+    <li><b>404</b> <i>[NimoFramework] plugin "my-plugin" has no route for GET /x</i>: check the path and method.</li>
+    <li><b>500</b> <i>[NimoFramework] plugin "my-plugin" threw: …</i>: a route handler threw. The stack is in the console.</li>
+    <li><b>404</b> <i>Plugins are turned off on the multiplayer site.</i>: expected on <code>play.nimorp.lol</code>.</li>
+</ul>
+
+<h2>Lifecycle</h2>
+<ul>
+    <li><b>Start:</b> plugins start on the first request to <code>/api/plugins/</code> after the page opens, not before. Your UI's first call (often <code>/probe</code>) starts them.</li>
+    <li><b><code>init()</code> can run many times.</b> The browser stops an idle Service Worker (often after about 30 seconds without requests) and starts it again on the next one. Keep <code>init</code> quick and safe to repeat, and keep state in storage.</li>
+    <li><b>Restart:</b> when an extension is updated, enabled, disabled or removed, all plugins restart on the next request. <code>exit()</code> is called first (it gets 5 seconds).</li>
+    <li><b>UI changes</b> need a page reload, like on SillyTavern.</li>
+</ul>
+
+<h2>Updating and the dev loop</h2>
+<ol class="steps">
+    <li><b>Change, build, commit, push</b> (<code>npm run build</code>, then commit <code>server.cjs</code> with your source).</li>
+    <li><b>Update on NimoTavern</b>: Extensions → Manage extensions → update your extension.</li>
+    <li><b>Reload the page</b> to load the new UI. The server part already restarted.</li>
+</ol>
+<div class="callout tip"><i class="fa-solid fa-code-branch"></i><div><strong class="t">Test on a branch</strong>
+<p>Install your work-in-progress from a branch: <code>https://github.com/you/my-extension/tree/dev</code>. A sub folder works too: <code>…/tree/main/extensions/my-extension</code>. Users keep using the default branch.</p></div></div>
+
+<h2>Limits</h2>
+<p>Some things can't exist in a browser. Each one has a replacement that usually does the job:</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Not available</th><th>Use instead</th></tr>
+<tr><td><code>child_process</code>, Python or other programs</td><td>Call a web API with <code>fetch</code>, or do the work in JavaScript or WebAssembly.</td></tr>
+<tr><td><code>http</code>/<code>https</code> requests</td><td><code>fetch</code> (or <code>require('node-fetch')</code>).</td></tr>
+<tr><td><code>app.listen()</code>, <code>net</code>, <code>tls</code>, <code>dgram</code>, a WebSocket server</td><td>Your routes are your server. For live updates, stream with <code>res.write()</code>. The browser's <code>WebSocket</code> client is available for connecting out.</td></tr>
+<tr><td><code>sqlite3</code>, <code>better-sqlite3</code></td><td><code>nimo.storage</code> or files, or bundle <code>sql.js</code> (SQLite in WebAssembly).</td></tr>
+<tr><td><code>sharp</code>, <code>canvas</code></td><td><code>OffscreenCanvas</code> and <code>createImageBitmap</code>, which are available here.</td></tr>
+<tr><td><code>zlib</code></td><td>Bundle <code>fflate</code> or <code>pako</code>, or use the built-in <code>CompressionStream</code>.</td></tr>
+<tr><td><code>worker_threads</code>, <code>cluster</code>, <code>vm</code></td><td>Keep the work inside your route handler.</td></tr>
+<tr><td>Timers and background jobs</td><td>The Service Worker sleeps when idle and your timers stop with it. Do the work when a request arrives.</td></tr>
+<tr><td><code>process.env</code></td><td>Empty: users have no environment. Store settings with <code>nimo.storage</code> and let users edit them in your UI.</td></tr>
+</table></div>
+<ul>
+    <li><b>Multiplayer:</b> no extension and no plugin ever runs on the multiplayer site (<code>play.nimorp.lol</code>). That's how NimoTavern guarantees other players' messages stay out of reach.</li>
+    <li><b>Install size:</b> GitHub repositories up to 2,000 files and 30 MB (10 MB per file).</li>
+    <li><b><code>init()</code></b> must finish within 20 seconds.</li>
+</ul>
+
+<h2>Checklist before publishing</h2>
+<ul>
+    <li><code>manifest.json</code> has <code>"nimo": { "framework": 1, "server": "server.cjs" }</code>.</li>
+    <li><code>server.cjs</code> is committed and up to date (run the build before every release).</li>
+    <li><code>info.id</code> is unique and made of lowercase letters, digits, <code>-</code> or <code>_</code>.</li>
+    <li>Your UI handles "backend not available" gracefully (the <code>/probe</code> check), for example on the multiplayer site.</li>
+    <li>No state lives only in memory.</li>
+    <li>You installed it from GitHub on NimoTavern, opened the console, and saw <code>[NimoFramework] loaded "…"</code>.</li>
+    <li>Your README says it works on NimoTavern. Users look for that.</li>
+</ul>
+
+<h2>FAQ</h2>
+<details class="wk-faq"><summary>Do users need to do anything special?</summary><div><p>No. They install your extension from its GitHub address like any other. The server part loads on its own.</p></div></details>
+<details class="wk-faq"><summary>Can I keep one repository for SillyTavern and NimoTavern?</summary><div><p>Yes. SillyTavern ignores the <code>nimo</code> manifest field, and the built <code>server.cjs</code> also works as a regular SillyTavern plugin. Branch on <code>typeof nimo</code> where behaviour differs (usually only file paths and storage). The <a href="https://github.com/nanachi2002/Nimo_Tavern/tree/main/nimo/framework/example" target="_blank" rel="noopener">example</a> does exactly this.</p></div></details>
+<details class="wk-faq"><summary>Is my plugin's data private?</summary><div><p>Yes, as private as the user's chats: encrypted in their browser with their key. NimoTavern stores it without being able to read it. Only that user, on their devices, can.</p></div></details>
+<details class="wk-faq"><summary>Can my plugin talk to my own server?</summary><div><p>Yes, with <code>fetch</code>. Your server must send CORS headers allowing <code>https://nimorp.lol</code> (or <code>*</code>). Remember the request then leaves the user's browser: say so in your README.</p></div></details>
+<details class="wk-faq"><summary>Why CommonJS and not ES modules?</summary><div><p>A plugin is loaded from the user's encrypted files, where browsers can't import modules directly. A single CommonJS file loads reliably and fast. esbuild does the conversion, so you can keep writing ES modules.</p></div></details>
+<details class="wk-faq"><summary>Something doesn't work and this page doesn't explain it</summary><div><p>Open an issue on <a href="https://github.com/nanachi2002/Nimo_Tavern/issues" target="_blank" rel="noopener">GitHub</a> with the console lines starting with <code>[NimoFramework]</code> and your repository's address.</p></div></details>

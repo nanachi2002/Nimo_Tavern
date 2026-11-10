@@ -125,21 +125,33 @@ function fakeSalt(usernameLc, kind) { return crypto.createHmac('sha256', CFG.sec
 const KDF = { alg: 'argon2id', m: 65536, t: 3, p: 1 };
 function validKdf(k) { return k && k.alg === 'argon2id' && Number.isInteger(k.m) && k.m >= 19456 && k.m <= 1048576 && Number.isInteger(k.t) && k.t >= 2 && k.t <= 10 && k.p === 1; }
 
-async function createSession(res, userId) {
+// Multiplayer lives on its own subdomain (play.<site>): a separate browser origin, so extensions installed on the
+// main site can never reach it. Same app, told apart by the Host header (nginx only forwards our own names).
+const isPlayHost = (req) => String(req.hostname || req.headers?.host || '').toLowerCase().startsWith('play.');
+const scopeOf = (req) => (isPlayHost(req) ? 'play' : 'main');
+
+async function createSession(res, userId, req) {
     const token = crypto.randomBytes(32);
     const expires = new Date(Date.now() + CFG.sessionDays * 86400_000);
-    await pool.query('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)', [sha256(token), userId, expires]);
+    await pool.query('INSERT INTO sessions (token_hash, user_id, expires_at, scope) VALUES ($1,$2,$3,$4)', [sha256(token), userId, expires, scopeOf(req)]);
     stats.count('logins');
     stats.markActive(userId);
     res.setHeader('Set-Cookie', `${COOKIE}=${token.toString('base64url')}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires.toUTCString()}${CFG.secureCookies ? '; Secure' : ''}`);
 }
-function clearCookie(res) { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${CFG.secureCookies ? '; Secure' : ''}`); }
+function clearCookie(res) {
+    res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${CFG.secureCookies ? '; Secure' : ''}`);
+    // Shared computers: wipe everything this site stored in the browser (caches, IndexedDB, local storage, and any
+    // Service Worker an extension may have registered), so nothing carries over to the next person.
+    res.setHeader('Clear-Site-Data', '"cache", "storage"');
+}
 
 async function getSession(req) {
     const tok = parseCookies(req.headers.cookie)[COOKIE];
     if (!tok || tok.length > 64) return null;
-    const { rows } = await pool.query('SELECT s.user_id, u.username FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > now()', [sha256(Buffer.from(tok, 'base64url'))]);
-    return rows[0] ? { userId: rows[0].user_id, username: rows[0].username, tokenHash: sha256(Buffer.from(tok, 'base64url')) } : null;
+    const { rows } = await pool.query('SELECT s.user_id, s.scope, u.username FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > now()', [sha256(Buffer.from(tok, 'base64url'))]);
+    // A login only counts on the site it was made on (cookies are host-only anyway; this is defence in depth).
+    if (!rows[0] || rows[0].scope !== scopeOf(req)) return null;
+    return { userId: rows[0].user_id, username: rows[0].username, scope: rows[0].scope, tokenHash: sha256(Buffer.from(tok, 'base64url')) };
 }
 
 // CSRF: state-changing API calls must carry our custom header (cannot be sent cross-site without CORS preflight, which we never allow).
@@ -190,6 +202,7 @@ auth.post('/prelogin', limit('prelogin', 30, 60_000), jsonSmall, wrap(async (req
 
 auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (req, res) => {
     if (!CFG.registrationOpen) return res.status(403).json({ error: 'Registration is closed' });
+    if (isPlayHost(req)) return res.status(403).json({ error: 'Create your account on the main site first, then log in here.' });
     const b = req.body || {};
     if (!USERNAME_RE.test(b.username || '')) return res.status(400).json({ error: 'Username must be 3-32 characters: letters, numbers, _ . -' });
     if (!validKdf(b.kdf) || !HEX64.test(b.authPw || '') || !HEX64.test(b.authRec || '') || !B64.test(b.wrappedPw || '') || !B64.test(b.wrappedRec || '')) return res.status(400).json({ error: 'Invalid registration data' });
@@ -203,7 +216,7 @@ auth.post('/register', limit('register', 5, 3600_000), jsonSmall, wrap(async (re
             `INSERT INTO users (username, username_lc, kdf, salt_pw, auth_pw_hash, salt_rec, auth_rec_hash, wrapped_pw, wrapped_rec, quota_bytes)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
             [b.username, b.username.toLowerCase(), b.kdf, saltPw, await hashAuth(b.authPw, saltPw), saltRec, await hashAuth(b.authRec, saltRec), b.wrappedPw, b.wrappedRec, CFG.quota]);
-        await createSession(res, rows[0].id);
+        await createSession(res, rows[0].id, req);
         stats.count('signups');
         res.json({ ok: true, username: b.username });
     } catch (e) {
@@ -249,7 +262,7 @@ auth.post('/login', limit('login', 20, 15 * 60_000), jsonSmall, wrap(async (req,
         return res.status(401).json({ error: 'Invalid username or password', captcha: captchaOn() && n >= CAPTCHA_AFTER, siteKey: CFG.turnstileSite });
     }
     await pool.query('UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1', [user.id]);
-    await createSession(res, user.id);
+    await createSession(res, user.id, req);
     res.json({ ok: true, username: user.username, wrappedPw: user.wrapped_pw });
 }));
 
@@ -292,7 +305,7 @@ auth.post('/recover/finish', limit('recover', 10, 3600_000), jsonSmall, wrap(asy
     await pool.query(`UPDATE users SET kdf=$2, salt_pw=$3, auth_pw_hash=$4, wrapped_pw=$5, salt_rec=$6, auth_rec_hash=$7, wrapped_rec=$8, failed_logins=0, locked_until=NULL WHERE id=$1`,
         [user.id, r.kdf, saltPw, await hashAuth(r.authPw, saltPw), r.wrappedPw, saltRec, await hashAuth(r.authRec, saltRec), r.wrappedRec]);
     await pool.query('DELETE FROM sessions WHERE user_id = $1', [user.id]);
-    await createSession(res, user.id);
+    await createSession(res, user.id, req);
     res.json({ ok: true, username: user.username });
 }));
 
@@ -349,6 +362,7 @@ auth.post('/delete-account', limit('sensitive', 10, 3600_000), requireSession, j
 const LEGACY_DIR = env('LEGACY_DIR', '/var/lib/nimotavern/legacy');
 
 auth.post('/legacy/claim', limit('login', 20, 15 * 60_000), jsonSmall, wrap(async (req, res) => {
+    if (isPlayHost(req)) return res.status(403).json({ error: 'Log in on the main site once first to import your account.' });
     const b = req.body || {};
     const u = String(b.username || '');
     if (!USERNAME_RE.test(u)) return res.status(400).json({ error: 'Invalid credentials' });
@@ -375,7 +389,7 @@ auth.post('/legacy/claim', limit('login', 20, 15 * 60_000), jsonSmall, wrap(asyn
             [leg.username, leg.username_lc, b.kdf, saltPw, await hashAuth(b.authPw, saltPw), saltRec, await hashAuth(b.authRec, saltRec), b.wrappedPw, b.wrappedRec, Math.max(CFG.quota, Number(leg.size) * 2)]);
         await client.query('UPDATE legacy_accounts SET claimed_user = $2 WHERE username_lc = $1', [leg.username_lc, user.id]);
         await client.query('COMMIT');
-        await createSession(res, user.id);
+        await createSession(res, user.id, req);
         stats.count('signups');
         res.json({ ok: true, username: leg.username, legacySize: Number(leg.size) });
     } catch (e) { await client.query('ROLLBACK').catch(() => { }); throw e; } finally { client.release(); }
@@ -545,6 +559,12 @@ function requireClientHeaderRelay(req, res, next) { if (!req.headers['x-nimo-rel
 const mpEngine = createEngine({ pool, sealer: createSealer(CFG.secret) });
 const mpHub = createHub({ getSession, engine: mpEngine });
 mpEngine.setHub(mpHub);
+// Multiplayer only answers on the play site (with a play login). The main site may only read the mailbox count
+// for its badge; everything else, including session titles, stays out of reach of main-site extensions.
+app.use('/api/nimo/mp', (req, res, next) => {
+    if (isPlayHost(req) || (req.method === 'GET' && req.path === '/inbox/count')) return next();
+    res.status(403).json({ error: 'Multiplayer is on the play site', play: true });
+});
 app.use('/api/nimo/mp', createRoutes({ engine: mpEngine, requireSession, requireClientHeader, limit, wrap }));
 setInterval(() => mpEngine.housekeeping().catch((e) => console.error('[nimotavern] mp housekeeping:', e?.message?.slice(0, 200))), 60_000).unref();
 
@@ -574,8 +594,12 @@ app.get('/', wrap(async (req, res) => {
     const s = await getSession(req);
     stats.view(req);
     if (s) { stats.markActive(s.userId); res.type('html').send(INDEX_HTML); return; }
+    if (isPlayHost(req)) return res.redirect('/login');
     sendPage(res, 'home.html');
 }));
+// The play site has no sign-up or legacy import: those happen on the main site.
+const mainUrl = (req) => `${req.protocol}://${String(req.headers.host || '').replace(/^play\./i, '')}`;
+app.get(['/register', '/home'], (req, res, next) => (isPlayHost(req) ? res.redirect(mainUrl(req) + req.path) : next()));
 app.get('/index.html', (_req, res) => res.redirect('/'));
 for (const p of ['login', 'register', 'recover', 'account', 'privacy', 'home']) app.get('/' + p, (req, res) => { stats.view(req); sendPage(res, p + '.html'); });
 
@@ -677,7 +701,7 @@ setInterval(() => pool.query('DELETE FROM sessions WHERE expires_at < now()').ca
 
 const server = app.listen(CFG.port, CFG.host, () => console.log(`NimoTavern listening on ${CFG.host}:${CFG.port}`));
 server.on('upgrade', (req, socket, head) => {
-    if (new URL(req.url, 'http://x').pathname === '/api/nimo/mp/ws') mpHub.upgrade(req, socket, head);
+    if (new URL(req.url, 'http://x').pathname === '/api/nimo/mp/ws' && isPlayHost(req)) mpHub.upgrade(req, socket, head);
     else socket.destroy();
 });
 // Last line of defence: a stray rejection must never take the whole site down. Logs the message only.

@@ -1,7 +1,7 @@
 <!--TITLE Extensions -->
 <!--ICON fa-solid fa-cubes -->
 <!--GROUP Shape the AI -->
-<!--DESC Summaries, expression sprites, Quick Replies, regex, image generation and more, and which ones work on NimoTavern. -->
+<!--DESC Built-in extensions, installing third-party ones from GitHub, what they can and can't do, and why they're off in multiplayer. -->
 <p>Extensions add features to SillyTavern. Open them with the <i class="fa-solid fa-cubes"></i> icon: each extension is a collapsible section with its own settings.</p>
 
 <h2>What works on NimoTavern</h2>
@@ -18,9 +18,61 @@
 <tr><td><b>Translation</b></td><td><span class="badge warn">Depends</span></td><td>Needs a translator that allows browser access.</td></tr>
 <tr><td><b>Vector Storage / Data Bank search (RAG)</b></td><td><span class="badge no">Disabled</span></td><td>Needs server-side embeddings of your text.</td></tr>
 <tr><td><b>Image captioning (local models)</b></td><td><span class="badge no">Disabled</span></td><td>Server-side vision models. Use a multimodal provider instead.</td></tr>
-<tr><td><b>Installing third-party extensions</b></td><td><span class="badge no">Not yet</span></td><td>Installing from a URL runs server-side code and git. Planned.</td></tr>
+<tr><td><b>Third-party extensions</b></td><td><span class="badge ok">Works</span></td><td>Installed from GitHub, run only in your browser. <a href="#installing-third-party-extensions">See below</a>.</td></tr>
+<tr><td><b>Server plugins (Node.js)</b></td><td><span class="badge no">Blocked</span></td><td>They'd run on a server shared by everyone. Authors can port them to <a href="/wiki/nimoframework">NimoFramework</a>.</td></tr>
 </table></div>
 <div class="callout note"><i class="fa-solid fa-circle-info"></i><div><p>This list is about what's possible technically. If something misbehaves, check <a href="/wiki/troubleshooting">Troubleshooting</a>.</p></div></div>
+
+<h2>Installing third-party extensions</h2>
+<p>Extensions made by the community (Memory Books, trackers, UI tweaks…) install the same way as on SillyTavern:</p>
+<ol class="steps">
+    <li>Open <i class="fa-solid fa-cubes"></i> <b>Extensions</b> and click <b>Install extension</b>.</li>
+    <li>Paste the extension's <b>GitHub address</b>, like <code>https://github.com/owner/repo</code> (a branch or sub folder works too: <code>…/tree/branch/folder</code>).</li>
+    <li>The first time, NimoTavern explains what an extension can do. Read it and accept.</li>
+    <li>The extension appears in the list. It's saved, encrypted, with the rest of your tavern, so it's on your other devices too. Update or delete it from <b>Manage extensions</b> like on SillyTavern.</li>
+</ol>
+<!--nosearch-->
+<div class="demo tall" data-title="Installing an extension from GitHub">
+<div class="demo-stage"><div class="mk">{{include:topbar}}<div class="mk-body">
+<div class="mk-chat"></div>
+<div class="mk-drawer left wide js-drawer" data-hide><h5><i class="fa-solid fa-cubes"></i> Extensions</h5>
+    <div class="row"><span class="menu_button"><i class="fa-solid fa-cubes"></i> Manage extensions</span><span class="menu_button js-inst"><i class="fa-solid fa-cloud-arrow-down"></i> Install extension</span></div>
+    <div class="mk-ext"><span><i class="fa-solid fa-chevron-right"></i> Summarize</span></div>
+    <div class="mk-ext"><span><i class="fa-solid fa-chevron-right"></i> Quick Reply</span></div>
+    <div class="mk-ext js-new" data-hide><span><i class="fa-solid fa-chevron-right"></i> Dice Roller</span><small>new</small></div>
+</div>
+<div class="mk-dialog js-pop" data-hide><h5><i class="fa-solid fa-cloud-arrow-down" style="color:var(--SmartThemeQuoteColor)"></i> Install extension</h5>
+    <label style="font-size:12px;color:var(--SmartThemeEmColor)">Enter the GitHub address of the extension to install</label>
+    <div class="text_pole js-url"></div>
+    <div class="acts"><span class="menu_button">Cancel</span><span class="menu_button green js-go">Install</span></div></div>
+<div class="mk-dialog js-consent" data-hide><h5><i class="fa-solid fa-triangle-exclamation"></i> Before you install an extension</h5>
+    <ul><li>It can read and change everything in <b>your</b> tavern.</li><li>It <b>can't</b> reach other users or NimoTavern's server.</li><li>It's always off in multiplayer.</li><li>Its files come straight from GitHub.</li></ul>
+    <div class="acts"><span class="menu_button">Cancel</span><span class="menu_button green js-ok">I understand, install</span></div></div>
+<div class="mk-toast js-toast" data-hide>Extension "dice-roller" installed</div>
+</div></div></div>
+<script type="application/json" class="steps">[
+ {"say":"Open Extensions with the cubes icon.","at":".js-ext","act":"click","show":[".js-drawer"],"wait":900},
+ {"say":"Click Install extension.","at":".js-inst","act":"click","show":[".js-pop"],"wait":700},
+ {"say":"Paste the extension's GitHub address (a branch or sub folder works too).","at":".js-url","act":"type","text":"https://github.com/some-author/dice-roller","wait":700},
+ {"say":"Install.","at":".js-go","act":"click","hide":[".js-pop"],"show":[".js-consent"],"wait":600},
+ {"say":"The first time only, NimoTavern explains what an extension can and can't do. Read it, then accept.","at":".js-ok","act":"none","wait":2600},
+ {"say":"Your browser downloads it straight from GitHub into your encrypted tavern.","at":".js-ok","act":"click","hide":[".js-consent"],"show":[".js-toast",".js-new"],"wait":1800},
+ {"say":"Done. It's on your other devices too, and never loaded on the multiplayer site.","hide":[".js-toast"],"wait":2400}
+]</script></div>
+<!--/nosearch-->
+<ul>
+    <li>Your browser downloads the files <b>directly from GitHub</b>. GitHub sees the visit like any other, but NimoTavern doesn't see which extensions you install.</li>
+    <li>Only GitHub is supported for now. A few limits apply: 2,000 files, 30 MB.</li>
+    <li>Without a GitHub account, GitHub allows about 60 checks per hour per network. If you hit it, wait a bit.</li>
+</ul>
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">What an extension can do</strong>
+<p>An extension is code written by someone else, running in <b>your browser</b>. It can read and change everything in <b>your</b> tavern (characters, chats, settings, API keys) and act as you. Only install extensions from authors you trust.</p>
+<p>It <b>can't</b> touch other users or NimoTavern's server: nothing anyone installs ever runs there.</p></div></div>
+<h3>Why extensions are off in multiplayer</h3>
+<p>A multiplayer session holds <b>other people's</b> messages and personas. To make sure no extension can ever see them, multiplayer runs on its own site, <code>play.nimorp.lol</code>. To your browser that's a different website, so the extensions you install on the main site can't load there or reach it. That's enforced by the browser itself, not just by our code. See <a href="/wiki/multiplayer">Multiplayer</a>.</p>
+<h3>Why server plugins don't run</h3>
+<p>Some SillyTavern add-ons come with a <b>server plugin</b>: Node.js code that runs on the server. On your own PC that's fine. On NimoTavern the server is shared by everyone, so a plugin there could read other people's data or take the site down. That's why NimoTavern never runs anyone's code on its server.</p>
+<p>Instead, creators can port their plugin to <a href="/wiki/nimoframework"><b>NimoFramework</b></a>, which runs it in each user's own browser with the same routes. If you'd love to use one, ask its author and point them to that page.</p>
 
 <h2>Summarize</h2>
 <p>Condenses the chat so far into a short recap that is always kept in the prompt, so the AI remembers old events after they scroll out of the context window.</p>

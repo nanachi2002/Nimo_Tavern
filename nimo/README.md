@@ -43,8 +43,22 @@ Browser                                                     NimoTavern server
   reference, never duplicated per user.
 * Server stores no email/IP/user agent; no access logs; rate limiting uses salted IP hashes in RAM.
 * Limitations: users trust the served JS (like any web app); the chosen AI provider sees prompts;
-  server-side ML features (vectors, captioning, classify) are disabled; third-party extensions that
-  need server-side installation are unavailable.
+  server-side ML features (vectors, captioning, classify) are disabled.
+
+## Extensions, NimoFramework and the play site
+
+* Third-party extensions: `nimo/sw/extinstall.js` replaces SillyTavern's git-based install/update/version/
+  branches/switch routes. Files come straight from api.github.com + raw.githubusercontent.com (both allow
+  CORS) into the user's encrypted `extensions` folder, with `.nimo-ext.json` (repo, ref, commit). The first
+  install shows a consent dialog (`web/js/boot.js`, stored as `extensionsConsent` in `nimotavern.json`).
+* NimoFramework (`nimo/sw/framework.js`, docs in `nimo/framework/`): ported server plugins declared with
+  `manifest.nimo.server` run in the Service Worker at `/api/plugins/<id>/`. Never on the server.
+* Multiplayer lives on `play.<host>` (same app, told apart by the Host header): a separate browser origin
+  with its own host-only cookie and `sessions.scope = 'play'`. `/api/nimo/mp/*` and its WebSocket only answer
+  there (except `GET /inbox/count`). In the play Service Worker, user extensions are hidden (empty extensions
+  folder), plugins are off, and `Store.localOnly` keeps every write in the local encrypted cache, never
+  uploaded, so session content can't reach the shared storage that main-site extensions can read.
+* Logout sends `Clear-Site-Data: "cache", "storage"`; login removes foreign Service Workers and caches.
 
 ## Build & deploy
 
@@ -65,7 +79,7 @@ the E2E checks. Build-time patches (see `nimo/build.mjs`) fail loudly if their t
 
 ## Wiki
 
-`/wiki` is a public, static wiki (21 pages) with animated demos and live widgets. Pages are fragments in
+`/wiki` is a public, static wiki (23 pages) with animated demos and live widgets. Pages are fragments in
 `nimo/web/wiki/NN-slug.html` (front matter comments `TITLE`, `ICON`, `GROUP`, `DESC`; `{{include:name}}` pulls
 from `web/wiki/_partials`). `nimo/build-wiki.mjs` wraps them in `web/wiki-layout.html`, adds heading anchors, the
 sidebar, prev/next links and `search.json`. Client code (demo player, sampler/context/lorebook/cipher widgets,

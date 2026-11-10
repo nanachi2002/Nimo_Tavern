@@ -54,6 +54,8 @@ import { router as dataMaidRouter } from '../../src/endpoints/data-maid.js';
 import { router as backupsRouter } from '../../src/endpoints/backups.js';
 import { router as imageMetadataRouter } from '../../src/endpoints/image-metadata.js';
 import { nimoUsersRouter } from './users-router.js';
+import { extensionsOverride } from './extinstall.js';
+import { frameworkRouter } from './framework.js';
 
 export const DATA_ROOT = '/data';
 export const USER_HANDLE = 'default-user';
@@ -85,10 +87,15 @@ export async function seedContent() {
     await checkForNewContent([getUserDirectories()]);
 }
 
+// Multiplayer site (play.*): the user's own extensions don't exist as far as SillyTavern can tell (an empty
+// folder), so none is listed, served or run there. Only built-in ones and NimoTavern Multiplayer load.
+const NO_EXTENSIONS = '/srv/no-user-extensions';
 const userMiddleware = (req, _res, next) => {
+    const directories = getUserDirectories();
+    if (nimoState.play) { directories.extensions = NO_EXTENSIONS; vfs.mkdirSync(NO_EXTENSIONS, { recursive: true }); }
     req.user = {
         profile: { handle: USER_HANDLE, name: nimoState.username || 'User', admin: false, enabled: true, created: 0, password: '', salt: '' },
-        directories: getUserDirectories(),
+        directories,
     };
     next();
 };
@@ -133,7 +140,8 @@ app.get('/csrf-token', (_req, res) => res.json({ token: 'disabled' }));
 app.get('/version', (_req, res) => res.json({ agent: 'NimoTavern', pkgVersion: __ST_VERSION__, gitRevision: 'nimotavern', gitBranch: 'nimotavern', isLatest: true }));
 app.post('/api/ping', (_req, res) => res.sendStatus(204));
 app.get('/api/ping', (_req, res) => res.sendStatus(204));
-app.post('/api/plugins/list', (_req, res) => res.json([]));
+// NimoFramework: ported server plugins, run here in the browser (never on NimoTavern's server).
+app.use('/api/plugins', frameworkRouter(() => getUserDirectories().extensions));
 
 app.use('/api/users', nimoUsersRouter);
 app.use('/api/moving-ui', movingUIRouter);
@@ -149,6 +157,7 @@ app.use('/api/presets', presetsRouter);
 app.use('/api/secrets', secretsRouter);
 app.use('/thumbnail', thumbnailRouter);
 app.use('/api/novelai', novelAiRouter);
+app.use('/api/extensions', extensionsOverride); // installs from GitHub in the browser (no git here)
 app.use('/api/extensions', extensionsRouter);
 app.use('/api/assets', assetsRouter);
 app.use('/api/files', filesRouter);

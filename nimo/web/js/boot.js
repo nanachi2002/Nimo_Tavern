@@ -33,6 +33,64 @@
     }
     sessionStorage.removeItem('nimo-reloaded');
 
+    // play.<site> is the multiplayer site: a separate origin where extensions never run.
+    const PLAY = location.hostname.toLowerCase().startsWith('play.');
+    const playUrl = () => location.protocol + '//play.' + location.host;
+
+    // Only NimoTavern's own Service Worker may live on this site. An extension could register another one to
+    // keep running after logout (on a shared computer): remove anything that isn't ours.
+    navigator.serviceWorker.getRegistrations?.().then((regs) => {
+        for (const r of regs) {
+            const script = (r.active || r.waiting || r.installing)?.scriptURL || '';
+            if (r.scope !== location.origin + '/' || !script.startsWith(location.origin + '/nimo-sw.js')) r.unregister();
+        }
+    }).catch(() => { });
+
+    // The first extension install shows what an extension can and can't do, and asks for consent.
+    if (!PLAY) {
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = async function (input, init) {
+            let path = '';
+            try { path = new URL(typeof input === 'string' ? input : input?.url || '', location.href).pathname; } catch { /* */ }
+            if (path === '/api/extensions/install') {
+                // Re-check unless already known: consent may have been given in another tab since this one loaded.
+                const status = window.nimoStatus?.extensionsConsent ? window.nimoStatus : await nativeFetch('/api/nimo-local/status').then((r) => r.json()).catch(() => ({}));
+                if (!status.extensionsConsent) {
+                    if (!await extensionConsent()) return new Response('Installation cancelled.', { status: 400 });
+                    await nativeFetch('/api/nimo-local/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extensionsConsent: true }) });
+                    window.nimoStatus = { ...status, extensionsConsent: true };
+                }
+            }
+            return nativeFetch(input, init);
+        };
+    }
+    function extensionConsent() {
+        return new Promise((resolve) => {
+            const d = document.createElement('div');
+            d.id = 'nimo-ext-consent';
+            d.innerHTML = `<div class="nimo-ext-box" role="dialog" aria-modal="true" aria-labelledby="nimo-ext-title">
+                <h3 id="nimo-ext-title"><i class="fa-solid fa-puzzle-piece"></i> Before you install an extension</h3>
+                <p>Extensions are code written by other people. On NimoTavern they run <b>only in your browser</b>, never on our server.</p>
+                <ul>
+                    <li><b>It can read and change everything in your tavern</b> (characters, chats, settings, API keys) and act as you. Only install extensions from authors you trust.</li>
+                    <li><b>It can't reach other users</b>, their data, or our server.</li>
+                    <li><b>Extensions are always off in multiplayer.</b> Multiplayer runs on its own site, <code>play.${location.host}</code>, where no extension can load, so they never see your group sessions or the other players.</li>
+                    <li>Your browser downloads the files straight from GitHub (GitHub sees your visit like any other). We don't see what you install.</li>
+                    <li>SillyTavern <b>server plugins</b> (Node.js) don't run here, because they'd run on a server shared by everyone. Their authors can port them to <a href="/wiki/nimoframework" target="_blank">NimoFramework</a>.</li>
+                </ul>
+                <div class="nimo-ext-actions"><button class="menu_button" data-a="no">Cancel</button><button class="menu_button nimo-ext-ok" data-a="yes">I understand, install</button></div>
+            </div>`;
+            document.body.append(d);
+            d.querySelector('.nimo-ext-ok').focus();
+            d.addEventListener('click', (e) => {
+                const a = e.target instanceof Element ? e.target.closest('[data-a]')?.getAttribute('data-a') : null;
+                if (!a && e.target !== d) return;
+                d.remove();
+                resolve(a === 'yes');
+            });
+        });
+    }
+
     fetch('/api/nimo-local/status').then(r => r.json()).then((s) => {
         if (!s.unlocked) goLogin();
         window.nimoStatus = s;
@@ -56,10 +114,31 @@
         }
     }).catch(() => { });
 
+    // Lets an extension know it runs on NimoTavern (and which NimoFramework version) without a request.
+    try { Object.defineProperty(window, 'NimoTavern', { value: Object.freeze({ framework: 1, play: PLAY }), enumerable: true }); } catch { /* */ }
+
+    // A NimoFramework plugin that could not start: say so on screen (once per problem), not only in the console.
+    const pluginErrorsShown = new Set();
+    function pluginError(folder, error, tries = 0) {
+        const key = folder + '\n' + error;
+        if (pluginErrorsShown.has(key)) return;
+        if (!window.toastr) { if (tries < 40) setTimeout(() => pluginError(folder, error, tries + 1), 500); return; }
+        pluginErrorsShown.add(key);
+        const esc = (s) => String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+        window.toastr.error(`${esc(error)}<br><small>The rest of the extension still loads. Details for its author: <a href="/wiki/nimoframework#debugging" target="_blank">NimoFramework guide</a></small>`,
+            `Extension "${esc(folder)}": its server part could not start`, { timeOut: 20000, extendedTimeOut: 10000, escapeHtml: false });
+    }
+
     let pendingWrites = 0;
     navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'nimo-locked') goLogin();
         if (e.data?.type === 'nimo-pending') pendingWrites = e.data.n;
+        if (e.data?.type === 'nimo-plugin-error') pluginError(String(e.data.folder || ''), String(e.data.error || ''));
+        // What NimoFramework plugins print (they run in the Service Worker) is shown here, in the page's console.
+        if (e.data?.type === 'nimo-plugin-log') {
+            const level = ['log', 'info', 'warn', 'error', 'debug'].includes(e.data.level) ? e.data.level : 'log';
+            console[level](`[${String(e.data.tag || 'plugin')}]`, ...(Array.isArray(e.data.args) ? e.data.args : []));
+        }
     });
     window.addEventListener('beforeunload', (e) => {
         if (pendingWrites > 0) { e.preventDefault(); e.returnValue = ''; } // encrypted changes still uploading
@@ -123,12 +202,20 @@
                 if (!n) { b?.remove(); continue; }
                 if (!b) { b = document.createElement('span'); b.className = 'nimo-badge'; host.append(b); }
                 b.textContent = n > 9 ? '9+' : String(n);
-                b.title = `${n} new in your mailbox (Account)`;
+                b.title = PLAY ? `${n} new in your mailbox (Account)` : `${n} new in your multiplayer mailbox (on play.${location.host})`;
             }
             if (acct) acct.title = n ? `NimoTavern account: ${n} new in your mailbox` : 'NimoTavern account, privacy & encryption';
         }
         refreshBadge();
         setInterval(refreshBadge, 60_000);
+        if (PLAY) {
+            document.body.classList.add('nimo-play');
+            // One reminder per visit: what's different on the multiplayer site.
+            if (!sessionStorage.getItem('nimo-play-note')) {
+                sessionStorage.setItem('nimo-play-note', '1');
+                setTimeout(() => window.toastr?.info('Extensions are off here for everyone\'s safety. Changes you make on this site (settings, characters…) stay on this device and don\'t sync to the main site.', 'Multiplayer site', { timeOut: 12000 }), 3000);
+            }
+        }
         window.addEventListener('nimo-inbox', refreshBadge); // pushed live by the multiplayer extension
         const ver = document.getElementById('version_display');
         if (ver) {

@@ -16,6 +16,12 @@ function setBusy(on, text) {
     for (const i of form.querySelectorAll('input,textarea')) i.readOnly = on;
 }
 
+// Multiplayer site (play.<host>): same account, separate login, no sign-up here.
+if (location.hostname.toLowerCase().startsWith('play.') && page === 'login') {
+    const main = `${location.protocol}//${location.host.replace(/^play\./i, '')}`;
+    form.insertAdjacentHTML('afterbegin', `<p class="nimo-muted" style="margin-top:0"><i class="fa-solid fa-dice-d20"></i> <b>Multiplayer site.</b> Log in with your usual NimoTavern username and password. Extensions never run here, so your group sessions stay out of their reach. No account yet? <a href="${main}/register">Create one on the main site</a>.</p>`);
+}
+
 const supported = swSupported();
 if (!supported && form) {
     // Block everything up front: never claim an account or create keys in a browser that can't run the tavern.

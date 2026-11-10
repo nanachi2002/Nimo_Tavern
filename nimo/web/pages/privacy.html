@@ -37,7 +37,9 @@
             <li><b>Your AI provider sees your prompts.</b> Encryption protects your data <i>at rest</i> and from NimoTavern. The provider you send prompts to can still read them. Pick one whose policy you trust, or run a local model.</li>
             <li><b>Your device holds the keys while you're logged in.</b> They're stored as non-exportable keys in your browser. Log out on shared computers: that wipes the keys and the local encrypted cache.</li>
             <li><b>Lost password + lost recovery phrase = lost data.</b> There's no reset. That's the price of real end-to-end encryption.</li>
-            <li><b>Features that need server-side AI models are disabled</b> (vector storage, server-side image captioning and classification), because they would require plaintext on the server. Third-party extensions that need server-side installation aren't available yet.</li>
+            <li><b>Features that need server-side AI models are disabled</b> (vector storage, server-side image captioning and classification), because they would require plaintext on the server. SillyTavern server plugins (Node.js code) never run on our server; authors can port them to <a href="/wiki/nimoframework">NimoFramework</a>, which runs them in your browser.</li>
+            <li><b>Third-party extensions run in your browser, with your access.</b> An extension you install can read and change your own tavern, so only install ones you trust. Your browser downloads them straight from GitHub; we don't see which ones you install. They can't reach other users or our server, and they never run on the multiplayer site.</li>
+            <li><b>Logging out wipes this site's browser storage</b> (caches, local databases, any background scripts), so nothing carries over to the next person on a shared computer.</li>
             <li><b>Metadata:</b> the server can see when you're active, how much you store and when blobs change, but not what they contain.</li>
         </ul>
     </section>
@@ -52,6 +54,7 @@
             <li><b>What the server can see in plain form:</b> who is in which session and who invited whom (usernames), the turn order and round number. Never the content of your solo chats.</li>
             <li><b>Players only see what's on screen.</b> The character definition, world setting, lorebook and API key stay with the host and are never sent to players.</li>
             <li><b>Use a separate API key</b> for multiplayer. Your solo key never leaves your browser; the multiplayer key has to be stored on the server for the session to run. Set a spending limit on it with your provider.</li>
+            <li><b>Multiplayer has its own site, play.nimorp.lol</b>, with its own login. To the browser it's a separate website, so extensions installed on the main site can't load there or reach your sessions. The play site never writes to your synced storage: session chats stay in that browser only.</li>
             <li><b>Invites are optional.</b> You can turn invites off or block someone in your Account mailbox. Inviting an unknown or unreachable username always gives the same answer, so usernames can't be probed this way.</li>
         </ul>
         <p class="nimo-muted">In short: the operator could technically read a multiplayer session while it runs. If that's not OK for a story, keep it solo.</p>
