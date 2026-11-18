@@ -13,10 +13,13 @@
     // even repeat them back as its reply. So while NimoLFM is on we use SillyTavern's plain built-in preset and ignore the
     // system prompt / post-history instructions that character cards bring along. The user's own choices are restored on switch-back.
     const SAFE_PRESET = 'Default';
-    const FLAGS = { prefer_character_prompt: false, prefer_character_jailbreak: false };
+    // "Start Reply With" (Advanced Formatting) is sent as the beginning of the AI's reply, so the model continues whatever it
+    // says; presets made for big models often put "thinking" rules there, which then show up as the reply. Cleared while on.
+    // NimoLFM never "thinks", so reasoning auto-parse is off too: otherwise a stray <think> puts the whole reply in the thinking box.
+    const FLAGS = { prefer_character_prompt: false, prefer_character_jailbreak: false, start_reply_with: '', reasoning_auto_parse: false };
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const LOCKED_IDS = ['chat_completion_source', 'custom_api_url_text', 'custom_model_id', 'api_key_custom', 'settings_preset_openai',
-        'prefer_character_prompt', 'prefer_character_jailbreak',
+        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse',
         'temp_openai', 'temp_counter_openai', 'top_p_openai', 'top_p_counter_openai', 'min_p_openai', 'min_p_counter_openai',
         'repetition_penalty_openai', 'rep_pen_counter_openai', 'freq_pen_openai', 'freq_pen_counter_openai', 'pres_pen_openai',
         'pres_pen_counter_openai', 'openai_max_context', 'openai_max_context_counter', 'custom_prompt_post_processing'];
@@ -35,13 +38,15 @@
     }
     const getVal = (id) => { const e = $el(id); return !e ? null : e.type === 'checkbox' ? e.checked : e.value; };
     const SAVE_IDS = ['main_api', 'chat_completion_source', 'custom_api_url_text', 'custom_model_id', 'settings_preset_openai', 'stream_toggle',
-        'prefer_character_prompt', 'prefer_character_jailbreak', ...Object.keys(PROFILE)];
+        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse', ...Object.keys(PROFILE)];
     // The preset dropdown's option VALUES are numbers; the preset NAME is the option's label.
     const presetOpt = (name) => [...($el('settings_preset_openai')?.options || [])].find((o) => (o.text || '').trim() === name);
     const presetName = () => { const s = $el('settings_preset_openai'); return s && s.selectedIndex >= 0 ? (s.options[s.selectedIndex].text || '').trim() : null; };
 
     async function applyProfile() {
         setVal('main_api', 'openai');
+        const c = cfg();                  // saves made by an older version lack newer fields: keep the user's value before overwriting it
+        if (c.saved) for (const id of SAVE_IDS) if (!(id in c.saved)) { c.saved[id] = getVal(id); save(); }
         const safe = presetOpt(SAFE_PRESET);
         if (safe && getVal('settings_preset_openai') !== safe.value) { setVal('settings_preset_openai', safe.value); await sleep(1200); } // loading a preset rewrites the sliders
         for (const [id, v] of Object.entries(FLAGS)) setVal(id, v);

@@ -124,6 +124,11 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
         while (messages.length >= 2 && messages[messages.length - 1].role === 'assistant' && messages[messages.length - 2].role === 'assistant') {
             const tail = messages.pop(); messages[messages.length - 1].content += '\n\n' + tail.content;
         }
+        // A final assistant message right after a user message is a prefill ("Start Reply With"). Presets for big models put
+        // "<think>" + thinking rules there; the model then continues the rules and the reply ends up in the thinking box.
+        // NimoLFM doesn't think, so such a prefill is dropped (a normal "Continue" of a real reply is kept).
+        const last = messages[messages.length - 1];
+        if (messages.length >= 2 && last.role === 'assistant' && messages[messages.length - 2].role === 'user' && /<\/?think|<\/?reasoning|do not leak/i.test(last.content)) messages.pop();
         if (chars > MAX_CHARS) return res.status(413).json({ error: `This chat is longer than NimoLFM's ${LFM.context.toLocaleString('en-US')}-token limit. Shorten the context size or trim the chat.` });
         if ((inflight.get(uid) || 0) >= 2) return res.status(429).json({ error: 'You already have two replies being written. Wait for one to finish.' });
 
