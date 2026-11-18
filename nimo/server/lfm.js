@@ -26,7 +26,11 @@ export const LFM = {
 const MAX_CHARS = 330_000;           // ~86K tokens of English; the model server would refuse more anyway
 const MAX_MESSAGES = 3000;
 
-const clamp = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+// Same text as the extension's rules (variant "X10"); keep the two in sync.
+const RULES_MARK = 'Write exactly 3 paragraphs';
+const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} acts, and the scene around them.* Paragraph 2: ${ch} speaks in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
+
+const clamp =(v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 
 export function createLfmRoutes({ requireSession, limit, wrap, secret, count = () => {}, upstream = 'http://127.0.0.1:8080' }) {
     if (!secret || String(secret).length < 32) throw new Error('NimoLFM: secret required');
@@ -129,6 +133,15 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
         // NimoLFM doesn't think, so such a prefill is dropped (a normal "Continue" of a real reply is kept).
         const last = messages[messages.length - 1];
         if (messages.length >= 2 && last.role === 'assistant' && messages[messages.length - 2].role === 'user' && /<\/?think|<\/?reasoning|do not leak/i.test(last.content)) messages.pop();
+        // The NimoLFM extension appends the reply rules to the last user message. If a client didn't (old cached code, another
+        // extension rewrote the message), add them here, so every user gets the format the model was tuned for.
+        const lastUser = messages[messages.length - 1];
+        if (lastUser.role === 'user' && !lastUser.content.includes(RULES_MARK)
+            && !/\[Pause your roleplay|from the point of view of|impersonat/i.test(lastUser.content.slice(-2000))) {   // summaries, impersonate
+            const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+            const m = sys.match(/Write (.{1,60}?)'s next reply in a fictional chat between .{1,60}? and (.{1,60}?)\./);
+            lastUser.content += '\n\n' + replyRules(m ? m[1] : 'the character', m ? m[2] : 'the user');
+        }
         if (chars > MAX_CHARS) return res.status(413).json({ error: `This chat is longer than NimoLFM's ${LFM.context.toLocaleString('en-US')}-token limit. Shorten the context size or trim the chat.` });
         if ((inflight.get(uid) || 0) >= 2) return res.status(429).json({ error: 'You already have two replies being written. Wait for one to finish.' });
 
