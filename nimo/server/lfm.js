@@ -28,7 +28,8 @@ const MAX_MESSAGES = 3000;
 
 // Same text as the extension's rules (variant "X10"); keep the two in sync.
 const RULES_MARK = 'Write exactly 3 paragraphs';
-const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} acts, and the scene around them.* Paragraph 2: ${ch} speaks in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
+const REACT_MARK = 'First react directly to';
+const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
 
 // ---- "Never write for the user", enforced.
 // The rules alone still let a 1.7B model narrate the user's persona now and then. So the reply is checked sentence by sentence
@@ -273,6 +274,12 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
         // extension rewrote the message), add them here, so every user gets the format the model was tuned for.
         const lastUser = messages[messages.length - 1];
         const hadRules = lastUser.role === 'user' && lastUser.content.includes(RULES_MARK);
+        // Older clients send rules that only describe the reply's shape, so the model fills it from the card and ignores what the
+        // user just did. Swap them for the current rules ("react to the user's last message first": 15/24 -> 20/24 in tests).
+        if (hadRules && !lastUser.content.includes(REACT_MARK)) {
+            const r = lastUser.content.match(RULES_NAMES_RE);
+            if (r) lastUser.content = lastUser.content.replace(/\[Only [^\]]{1,60}? acts in this reply:[\s\S]*\]\s*$/, replyRules(r[1].trim(), r[2].trim()));
+        }
         if (lastUser.role === 'user' && !lastUser.content.includes(RULES_MARK)
             && !/\[Pause your roleplay|from the point of view of|impersonat/i.test(lastUser.content.slice(-2000))) {   // summaries, impersonate
             const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
