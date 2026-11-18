@@ -30,7 +30,134 @@ const MAX_MESSAGES = 3000;
 const RULES_MARK = 'Write exactly 3 paragraphs';
 const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} acts, and the scene around them.* Paragraph 2: ${ch} speaks in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
 
-const clamp =(v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+// ---- "Never write for the user", enforced.
+// The rules alone still let a 1.7B model narrate the user's persona now and then. So the reply is checked sentence by sentence
+// BEFORE it is sent: a sentence that makes the user act or speak is thrown away and the model rewrites from the last good
+// sentence (the good part is sent back as the start of its reply). Nothing written for the user reaches the screen.
+const NAMES_RE = /Write (.{1,60}?)'s next reply in a fictional chat between .{1,60}? and (.{1,60}?)\./;
+function roleplayNames(messages) {
+    const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+    const m = sys.match(NAMES_RE);
+    return m ? { ch: m[1].trim(), user: m[2].trim() } : null;
+}
+const roleplayUser = (messages) => roleplayNames(messages)?.user || null;
+// The model talking ABOUT the task instead of roleplaying ("<think>We need to produce… The user is playing…").
+const META = /<\/?think|<\/?reasoning|\bthe user\b|\bwe need to\b|\b(?:3|three) paragraphs\b|\bin asterisks\b|\bout-of-character\b/i;
+const reEsc =(s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export function makeUserGuard(user) {
+    const names = [...new Set([user, user.split(/\s+/)[0]])].filter((n) => n.length >= 2).map(reEsc);
+    if (!names.length) return null;
+    const N = `(?:${names.join('|')})`;
+    const VERB = `[a-z]+(?:ed|s)\\b`;        // "stammered", "looks", "trembles": the user doing something
+    const start = new RegExp(`^[\\s*_~(]*${N}(?:'s\\s+[a-z]+)?\\s+[a-z]`);                            // sentence starts with the user acting
+    const attrib = new RegExp(`Q[\\s*,.!?…-]*${N}\\s+[a-z]`);                                          // "…," Haruka said
+    const clause = new RegExp(`(?:[,;:—–]|\\b(?:and|while|as|when|before|after|until|then|so))\\s+${N}(?:'s\\s+[a-z]+)?\\s+${VERB}`);
+    return (sentence) => {
+        if (META.test(sentence)) return true;
+        const t = sentence.replace(/"[^"\n]*"|“[^”\n]*”/g, 'Q').replace(/["“][^"”\n]*$/, 'Q');   // only narration counts, not speech
+        return start.test(t) || attrib.test(t) || clause.test(t);
+    };
+}
+// Splits off complete sentences (outside quotes, ending in . ! ? … or a line break). Returns [sentences, rest].
+export function takeSentences(text) {
+    const out = []; let from = 0, q = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '\n') { q = false; let j = i; while (text[j + 1] === '\n') j++; out.push(text.slice(from, j + 1)); from = j + 1; i = j; continue; }
+        if (c === '"' || c === '“' || c === '”') { q = c === '“' ? true : c === '”' ? false : !q; }
+        if (!q && /[.!?…"”*]/.test(c) && /[.!?…]/.test(/[.!?…]/.test(c) ? c : text[i - 1] || '')) {
+            let j = i + 1;
+            if (j < text.length && !/\s/.test(text[j])) continue;   // "Mr.X", "...!" etc: not the end yet
+            while (j < text.length && text[j] === ' ') j++;
+            if (j >= text.length) break;            // need to see what follows before calling it a sentence
+            out.push(text.slice(from, j)); from = j; i = j - 1;
+        }
+    }
+    return [out, text.slice(from)];
+}
+const MAX_REWRITES = 4;
+const ENOUGH_WORDS = 90;                    // when the reply is already this long, a violation just ends it
+function guardedReply({ up, body, wantStream, violates, res, release }) {
+    const id = 'chatcmpl-' + crypto.randomBytes(9).toString('base64url'), created = Math.floor(Date.now() / 1000);
+    const base = body.messages;
+    const lastIsAssistant = base[base.length - 1].role === 'assistant';      // "Continue": the reply goes on from that message
+    let sent = '', rewrites = 0, done = false, current = null, started = false;
+    const words = (s) => (s.match(/\S+/g) || []).length;
+    const chunk = (delta, finish = null) => 'data: ' + JSON.stringify({ id, object: 'chat.completion.chunk', created, model: MODEL_ID, choices: [{ index: 0, delta, finish_reason: finish }] }) + '\n\n';
+    function begin() {
+        if (started || !wantStream) return; started = true;
+        res.status(200); res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Accel-Buffering', 'no');
+        res.write(chunk({ role: 'assistant', content: '' }));
+    }
+    function emit(text) { if (!text) return; sent += text; if (wantStream) { begin(); res.write(chunk({ content: text })); } }
+    function finish() {
+        if (done) return; done = true; release();
+        try { current?.destroy(); } catch {}
+        if (wantStream) { begin(); res.write(chunk({}, 'stop')); res.end('data: [DONE]\n\n'); }
+        else res.json({ id, object: 'chat.completion', created, model: MODEL_ID, choices: [{ index: 0, message: { role: 'assistant', content: sent.trimEnd() }, finish_reason: 'stop' }] });
+    }
+    function fail(code, json) {
+        if (started || sent) return finish();
+        if (done) return; done = true; release();
+        res.status(code).json(json);
+    }
+    res.on('close', () => { if (!done) { done = true; release(); try { current?.destroy(); } catch {} } });   // user stopped: stop generating
+
+    function attempt() {
+        const messages = sent
+            ? (lastIsAssistant ? [...base.slice(0, -1), { role: 'assistant', content: base[base.length - 1].content + sent }] : [...base, { role: 'assistant', content: sent }])
+            : base;
+        const left = body.max_tokens - Math.round(words(sent) * 1.4);
+        if (left < 24) return finish();
+        const payload = Buffer.from(JSON.stringify({ ...body, messages, max_tokens: left, stream: true }));
+        let pending = '', cut = false;
+        const uq = current = http.request({ host: up.hostname, port: up.port, path: '/v1/chat/completions', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': payload.length }, timeout: 600_000 }, (ur) => {
+            if (ur.statusCode !== 200) {              // pass the model server's error through (only possible before anything was sent)
+                let e = ''; ur.setEncoding('utf8'); ur.on('data', (c) => { if (e.length < 4000) e += c; });
+                ur.on('end', () => { let j; try { j = JSON.parse(e); } catch { j = { error: 'NimoLFM error' }; } fail(ur.statusCode || 502, j); });
+                return;
+            }
+            let buf = '';
+            const onViolation = () => {
+                cut = true; try { uq.destroy(); } catch {}
+                if (done) return;
+                if (words(sent) >= ENOUGH_WORDS || rewrites >= MAX_REWRITES) return finish();
+                rewrites++; attempt();
+            };
+            const feed = (text) => {
+                pending += text;
+                const [sentences, rest] = takeSentences(pending);
+                pending = rest;
+                for (const s of sentences) { if (violates && violates(s)) return onViolation(); emit(s); }
+            };
+            ur.setEncoding('utf8');
+            ur.on('data', (c) => {
+                if (cut || done) return;
+                buf += c; let k;
+                while ((k = buf.indexOf('\n')) !== -1) {
+                    const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1);
+                    if (!line.startsWith('data:')) continue;
+                    const d = line.slice(5).trim(); if (d === '[DONE]') continue;
+                    try { const t = JSON.parse(d).choices?.[0]?.delta?.content; if (t) feed(t); } catch {}
+                    if (cut || done) return;
+                }
+            });
+            ur.on('end', () => {
+                if (cut || done) return;
+                if (pending.trim()) { if (violates && violates(pending)) return onViolation(); emit(pending); pending = ''; }
+                finish();
+            });
+            ur.on('error', () => { if (!cut) finish(); });
+        });
+        uq.on('timeout', () => uq.destroy(new Error('timeout')));
+        uq.on('error', () => { if (cut || done) return; fail(503, { error: 'NimoLFM is offline right now. Try again in a minute.' }); });
+        uq.end(payload);
+    }
+    attempt();
+}
+
+const clamp = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 
 export function createLfmRoutes({ requireSession, limit, wrap, secret, count = () => {}, upstream = 'http://127.0.0.1:8080' }) {
     if (!secret || String(secret).length < 32) throw new Error('NimoLFM: secret required');
@@ -161,27 +288,14 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
             dry_multiplier: 0.8, dry_base: 1.75, dry_allowed_length: 3, dry_penalty_last_n: 4096,
         };
         if (Array.isArray(b.stop)) body.stop = b.stop.filter((s) => typeof s === 'string' && s.length && s.length <= 40).slice(0, 4);
-        const payload = Buffer.from(JSON.stringify(body));
 
         count('lfm_calls');
         inflight.set(uid, (inflight.get(uid) || 0) + 1);
         let released = false;
         const release = () => { if (!released) { released = true; const n = (inflight.get(uid) || 1) - 1; if (n <= 0) inflight.delete(uid); else inflight.set(uid, n); } };
 
-        const uq = http.request({ host: up.hostname, port: up.port, path: '/v1/chat/completions', method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': payload.length }, timeout: 600_000 }, (ur) => {
-            res.status(ur.statusCode || 502);
-            const ct = ur.headers['content-type']; if (ct) res.setHeader('Content-Type', ct);
-            res.setHeader('Cache-Control', 'no-store');
-            res.setHeader('X-Accel-Buffering', 'no');
-            ur.on('error', () => res.end());
-            ur.on('end', release);
-            ur.pipe(res);
-        });
-        uq.on('timeout', () => uq.destroy(new Error('timeout')));
-        uq.on('error', () => { release(); if (res.headersSent) return res.end(); res.status(503).json({ error: 'NimoLFM is offline right now. Try again in a minute.' }); });
-        res.on('close', () => { release(); if (!res.writableFinished) uq.destroy(); });   // user stopped or left: stop generating
-        uq.end(payload);
+        const userName = roleplayUser(messages);
+        guardedReply({ up, body, wantStream: b.stream === true, violates: userName ? makeUserGuard(userName) : null, res, release });
     });
 
     return r;
