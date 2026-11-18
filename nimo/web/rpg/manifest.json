@@ -1,0 +1,13 @@
+{
+    "display_name": "NimoTavern RPG mode",
+    "loading_order": 101,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Nimo team",
+    "version": "1.0.0",
+    "homePage": "https://nimorp.lol/wiki/rpg-mode",
+    "generate_interceptor": "nimoRpgInterceptor",
+    "auto_update": false
+}

@@ -1,0 +1,63 @@
+<!--TITLE RPG mode overview -->
+<!--ICON fa-solid fa-dice-d20 -->
+<!--GROUP RPG mode -->
+<!--DESC Turn any chat into a Baldur's Gate or Cyberpunk style game: choices, dice, stats, XP and a skill web. A NimoTavern feature. -->
+                <p><b>RPG mode</b> is a NimoTavern feature (it's not part of SillyTavern). It turns a chat into a game: after every reply the AI offers <b>four choices</b>, and the ones that can fail are settled with <b>your character's stats and a dice roll</b>. Health, money and inventory are tracked for you. Think Baldur's Gate or Cyberpunk 2077 dialogue, with <b>any character card</b> as the narrator.</p>
+<div class="rg-demo rg-hero" role="img" aria-label="Animated demo: the narrator describes a scene, four choice cards appear, the player picks one, a die rolls on screen and the result is shown, then the story continues and the player earns experience.">
+<div class="rg-pad">
+  <div class="rg-msg in a2"><b>Narrator</b><em>*The vault door hums. Two guards pace the corridor beyond, and the key is nowhere in sight.*</em></div>
+  <div class="rg-msg you in a64"><b>Kira</b><em>*Pick the lock before the guards return*</em><br><span class="rg-roll"><i class="fa-solid fa-dice-d20"></i> 6 + 7 + 1 = 14 vs 11 · Success</span></div>
+  <div class="rg-msg in a70"><b>Narrator</b><em>*Click. The last tumbler falls and the door sighs open. Cold air spills out, and with it, a faint blue glow...*</em></div>
+</div>
+<div class="rg-hud"><div class="rg-ava"><i class="fa-solid fa-user"></i><small>3</small></div>
+  <div class="rg-who"><b>Kira</b><span class="rg-dim">Level 3 · Fantasy</span><div class="rg-bar"><i style="width:78%"></i></div><div class="rg-bar xp"><i class="xp-fill" style="width:30%"></i></div></div>
+  <span class="rg-coins"><i class="fa-solid fa-coins"></i>15</span></div>
+<div class="rg-cards rg-cardlist">
+  <div class="in a8"><div class="rg-card others"><div class="rg-medal"><i class="fa-solid fa-hand-fist"></i></div><div><div class="t">Force the gate open</div><div class="rg-tags"><span class="rg-tag"><i class="fa-solid fa-hand-fist"></i> Strength <b>4</b></span><span class="rg-tag"><i class="fa-solid fa-scale-balanced"></i> Hard <b>DV 13</b></span></div></div><div class="rg-ring bad" style="--p:20"><span>20%</span></div></div></div>
+  <div class="in a10"><div class="rg-card pick"><div class="rg-medal"><i class="fa-solid fa-gear"></i></div><div><div class="t">Pick the lock before the guards return</div><div class="rg-tags"><span class="rg-tag"><i class="fa-solid fa-gear"></i> Craft <b>7</b> +1</span><span class="rg-tag"><i class="fa-solid fa-scale-balanced"></i> Standard <b>DV 11</b></span></div></div><div class="rg-ring good" style="--p:80"><span>80%</span></div></div></div>
+  <div class="in a12"><div class="rg-card others"><div class="rg-medal"><i class="fa-solid fa-comments"></i></div><div><div class="t">Talk your way past the guards</div><div class="rg-tags"><span class="rg-tag"><i class="fa-solid fa-comments"></i> Charisma <b>5</b></span><span class="rg-tag"><i class="fa-solid fa-feather"></i> Easy <b>DV 8</b></span></div></div><div class="rg-ring good" style="--p:80"><span>80%</span></div></div></div>
+  <div class="in a14"><div class="rg-card others"><div class="rg-medal"><i class="fa-solid fa-feather-pointed"></i></div><div><div class="t">Wait in the shadows and watch</div><div class="rg-tags"><span class="rg-tag"><i class="fa-solid fa-shield-halved"></i> No roll needed</span></div></div><div class="rg-ring good"><span style="color:#6fd18a"><i class="fa-solid fa-check"></i></span></div></div></div>
+</div>
+<div class="rg-toast">+10 XP</div>
+<div class="rg-over"><div class="rg-over-in">
+  <div class="rg-act">Pick the lock before the guards return</div>
+  <div class="rg-die rg-die-wrap"><span class="rg-die-num f1">3</span><span class="rg-die-num f2">9</span><span class="rg-die-num f3">2</span><span class="rg-die-num f4">6</span></div>
+  <div class="rg-eq"><span class="c eq1">6 <small>die</small></span><span class="eq1">+</span><span class="c eq2">7 <small>Craft</small></span><span class="eq2">+</span><span class="c eq2">1 <small>perk</small></span><span class="eq3">=</span><span class="c eq3">14 <small>vs DV 11</small></span></div>
+  <div class="rg-stamp">Success</div>
+</div></div>
+<div class="rg-demo-cap"><i class="fa-solid fa-rotate"></i> This loops: choose, roll, story continues.</div>
+</div>
+<div class="callout secure"><i class="fa-solid fa-shield-halved"></i><div><strong class="t">Still end-to-end encrypted</strong>
+<p>RPG mode runs entirely in your browser. Your character sheet, rolls and adventures are stored in your normal encrypted chats and settings. The server never sees them.</p></div></div>
+
+<h2>The game loop</h2>
+<p>Every turn works the same way. The AI never rolls dice and never decides how a check ends: the app does that, so nobody can fudge a roll.</p>
+<div class="rg-flow" role="list">
+<div class="rg-step" role="listitem"><span class="n">1</span><i class="fa-solid fa-scroll"></i><b>The AI narrates</b><small>and offers 4 choices</small></div>
+<div class="rg-step" role="listitem"><span class="n">2</span><i class="fa-solid fa-hand-pointer"></i><b>You pick one</b><small>or write your own action</small></div>
+<div class="rg-step" role="listitem"><span class="n">3</span><i class="fa-solid fa-dice-d20"></i><b>The app rolls</b><small>d10 + your attribute vs difficulty</small></div>
+<div class="rg-step" role="listitem"><span class="n">4</span><i class="fa-solid fa-book-open"></i><b>The story reacts</b><small>XP, health, loot, new choices</small></div>
+</div>
+
+<h2>A separate game mode</h2>
+<ul>
+    <li><b>RPG adventures</b> are chats marked as games. Once a chat is an RPG adventure, <b>it can't go back</b> to a normal chat.</li>
+    <li><b>RPG characters</b> are personas made with the RPG character maker. They only show up and can only be played in RPG adventures, and your normal personas stay in normal chats.</li>
+    <li>Each adventure is played by <b>one RPG character</b>, like a save file. It keeps its own health, money and inventory, so the same character can live several adventures at once.</li>
+</ul>
+
+<h2>Quick start</h2>
+<ol class="steps">
+    <li><b>Make an RPG character.</b> In the persona tab tap <b>Create</b> and choose <b>RPG character</b> (or <b>RPG version of</b> your current persona). Spend your points in the skill web.</li>
+    <li><b>Open a chat</b> with the character you want as the narrator.</li>
+    <li>Open the <i class="fa-solid fa-bars"></i> <b>chat options</b> menu (left of the message box) and choose <i class="fa-solid fa-dice-d20"></i> <b>New RPG adventure</b>. (<i class="fa-solid fa-wand-sparkles"></i> <b>Turn chat into RPG…</b> converts the chat you're in instead, for good.)</li>
+    <li>Pick a <b>world</b> and your <b>RPG character</b>, then tap <b>Begin the adventure</b> above the message box to get your first choices.</li>
+</ol>
+
+<h2>Where to go next</h2>
+<div class="wk-cards">
+<a class="wk-card nimo-glass" href="/wiki/rpg-characters"><h3><i class="fa-solid fa-user-gear"></i> Worlds &amp; characters</h3><p>Fantasy, Cyberpunk or Adaptive, and building a character in the skill web.</p></a>
+<a class="wk-card nimo-glass" href="/wiki/rpg-dice"><h3><i class="fa-solid fa-dice-d20"></i> Choices &amp; dice</h3><p>How a card works, how the roll is decided, and your real odds.</p></a>
+<a class="wk-card nimo-glass" href="/wiki/rpg-progression"><h3><i class="fa-solid fa-star"></i> XP, levels &amp; perks</h3><p>How you grow, what perks really do, and the character sheet.</p></a>
+<a class="wk-card nimo-glass" href="/wiki/rpg-tips"><h3><i class="fa-solid fa-lightbulb"></i> Tips &amp; troubleshooting</h3><p>Best AIs to use, what to do when choices don't show, and answers to common questions.</p></a>
+</div>

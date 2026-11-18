@@ -1,0 +1,13 @@
+{
+    "display_name": "NimoLFM",
+    "loading_order": 102,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Nimo team",
+    "version": "1.0.0",
+    "homePage": "https://nimorp.lol/wiki/nimolfm",
+    "generate_interceptor": "nimoLfmInterceptor",
+    "auto_update": false
+}

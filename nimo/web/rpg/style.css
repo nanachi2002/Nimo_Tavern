@@ -1,0 +1,574 @@
+/* NimoTavern RPG mode.
+ *
+ * Built on SillyTavern's own theme (--SmartTheme*, --mainFontFamily, --mainFontSize), so it follows whatever theme the
+ * user picked. On top of that a *world skin* sets the mood:
+ *   data-world="fantasy"    a D&D tabletop feel: gold trim, serif headings, rounded corners, warm glow
+ *   data-world="cyberpunk"  a neon HUD feel: cut corners, mono headings, scanlines, cyan glow
+ * Mobile first. Nothing here loads external fonts or images.
+ */
+
+/* ===== Tokens ===== */
+.nimo-rpg-scope, .nimo-rpg-bar {
+    --acc: var(--SmartThemeQuoteColor);
+    --txt: var(--SmartThemeBodyColor);
+    --dim: color-mix(in srgb, var(--SmartThemeBodyColor) 62%, transparent);
+    --edge: var(--SmartThemeBorderColor);
+    --panel: color-mix(in srgb, var(--SmartThemeBlurTintColor) 94%, #000);
+    --panel2: color-mix(in srgb, var(--SmartThemeBlurTintColor) 80%, var(--SmartThemeBodyColor) 9%);
+    --hair: color-mix(in srgb, var(--SmartThemeBodyColor) 16%, transparent);
+    --good: #6fd18a; --mid: #e6c35c; --bad: #ef6a5a; --gold: #ffd76a;
+    --r-radius: 10px;
+    --r-head: var(--mainFontFamily);
+    --r-num: var(--mainFontFamily);
+    --acc2: var(--acc);
+    --glow: 0 0 12px color-mix(in srgb, var(--acc2) 40%, transparent);
+    --die-hi: #f1e3c3; --die-lo: #b98a4c; --die-edge: #5b3b14; --die-num: #3a210a;
+    --c: 12px; --w: 2px;
+    color: var(--txt);
+}
+[data-world="fantasy"] {
+    --acc2: #d9a441;
+    --r-radius: 12px;
+    --r-head: Georgia, "Times New Roman", serif;
+    --glow: 0 0 14px color-mix(in srgb, #d9a441 38%, transparent);
+    --die-hi: #f4e7c8; --die-lo: #b9884a; --die-edge: #5a3a12; --die-num: #3a210a;
+}
+[data-world="adaptive"] {
+    --acc2: #b78cff;
+    --r-radius: 8px;
+    --glow: 0 0 14px color-mix(in srgb, #b78cff 42%, transparent);
+    --die-hi: #ece3ff; --die-lo: #8f6bd6; --die-edge: #3b2570; --die-num: #26134f;
+}
+[data-world="cyberpunk"] {
+    --acc2: #2fe6ff;
+    --acc3: #ff3ea5;
+    --r-radius: 3px;
+    --r-head: var(--monoFontFamily, ui-monospace, monospace);
+    --glow: 0 0 14px color-mix(in srgb, #2fe6ff 50%, transparent);
+    --die-hi: #2b3548; --die-lo: #0b0f18; --die-edge: #2fe6ff; --die-num: #7ff3ff;
+}
+.nimo-rpg-scope h3, .nimo-rpg-scope h4, .r-lu-card small, .r-dice-action, .r-dice-stamp { font-family: var(--r-head); }
+[data-world="cyberpunk"] h3, [data-world="cyberpunk"] h4, [data-world="cyberpunk"] .r-dice-action, [data-world="cyberpunk"] .r-lu-card small { text-transform: uppercase; letter-spacing: .08em; }
+[data-world="fantasy"] h3, [data-world="fantasy"] h4 { letter-spacing: .03em; }
+
+/* ===== Frame: corner brackets (gold rounded in fantasy, neon square in cyberpunk) ===== */
+.r-frame { position: relative; background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-radius); }
+.r-frame::before {
+    content: ""; position: absolute; inset: -1px; pointer-events: none; border-radius: inherit;
+    --k: var(--acc2);
+    background:
+        linear-gradient(var(--k), var(--k)) top left / var(--c) var(--w) no-repeat,
+        linear-gradient(var(--k), var(--k)) top left / var(--w) var(--c) no-repeat,
+        linear-gradient(var(--k), var(--k)) top right / var(--c) var(--w) no-repeat,
+        linear-gradient(var(--k), var(--k)) top right / var(--w) var(--c) no-repeat,
+        linear-gradient(var(--k), var(--k)) bottom left / var(--c) var(--w) no-repeat,
+        linear-gradient(var(--k), var(--k)) bottom left / var(--w) var(--c) no-repeat,
+        linear-gradient(var(--k), var(--k)) bottom right / var(--c) var(--w) no-repeat,
+        linear-gradient(var(--k), var(--k)) bottom right / var(--w) var(--c) no-repeat;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--k) 70%, transparent));
+}
+[data-world="fantasy"] .r-frame { box-shadow: inset 0 0 0 3px var(--panel), inset 0 0 0 4px color-mix(in srgb, #d9a441 28%, transparent), 0 4px 18px rgba(0, 0, 0, .35); }
+[data-world="cyberpunk"] .r-frame { box-shadow: 0 0 0 1px color-mix(in srgb, #2fe6ff 18%, transparent), 0 6px 22px rgba(0, 0, 0, .45); }
+[data-world="cyberpunk"] .r-frame::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: .5;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 3px);
+}
+
+/* ===== Small pieces ===== */
+.r-tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; white-space: nowrap;
+    font-size: .76em; line-height: 1.7; background: color-mix(in srgb, var(--txt) 8%, transparent); border: 1px solid var(--hair);
+}
+[data-world="cyberpunk"] .r-tag { border-radius: 2px; text-transform: uppercase; letter-spacing: .04em; font-size: .7em; }
+.r-tag small { opacity: .65; font-size: .85em; }
+.r-tag b { font-weight: 800; }
+.r-tag em { font-style: normal; color: var(--good); font-weight: 800; margin-left: 1px; }
+.r-tag.dv.easy { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.r-tag.dv.standard { color: var(--mid); border-color: color-mix(in srgb, var(--mid) 45%, transparent); }
+.r-tag.dv.hard { color: #f0925a; border-color: color-mix(in srgb, #f0925a 45%, transparent); }
+.r-tag.dv.very_hard { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+.r-tag.gate { color: #b99cff; border-color: color-mix(in srgb, #b99cff 45%, transparent); }
+.r-tag.gate.need { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.r-tag.perk { border-color: var(--tc, var(--hair)); }
+.r-tag.perk i { color: var(--tc); }
+.r-tag.safe { color: var(--good); }
+.r-tag.fx { background: color-mix(in srgb, var(--tc, var(--acc)) 14%, transparent); border-color: color-mix(in srgb, var(--tc, var(--acc)) 40%, transparent); white-space: normal; line-height: 1.35; padding: 3px 9px; }
+.nimo-rpg-plus { color: var(--good); font-weight: 800; }
+
+.r-ring {
+    --rc: var(--good); position: relative; flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+    background: conic-gradient(var(--rc) calc(var(--p) * 1%), color-mix(in srgb, var(--txt) 14%, transparent) 0);
+}
+.r-ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--panel); }
+.r-ring b { position: relative; font-size: .95em; font-weight: 800; font-family: var(--r-num); font-variant-numeric: tabular-nums; }
+.r-ring b small { font-size: .62em; opacity: .7; }
+.r-ring.good { --rc: var(--good); } .r-ring.mid { --rc: var(--mid); } .r-ring.bad { --rc: var(--bad); }
+.r-ring.good { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--good) 45%, transparent)); }
+
+/* ===== The bar above the message box ===== */
+.nimo-rpg-bar {
+    position: relative; display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 6px; padding: 8px;
+    font-size: calc(var(--mainFontSize) * .95); box-sizing: border-box;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor) 88%, transparent);
+    backdrop-filter: blur(var(--SmartThemeBlurStrength)); -webkit-backdrop-filter: blur(var(--SmartThemeBlurStrength));
+    border: 1px solid var(--edge); border-radius: calc(var(--r-radius) + 2px);
+}
+.nimo-rpg-bar[hidden] { display: none; }
+[data-world="fantasy"].nimo-rpg-bar { border-color: color-mix(in srgb, #d9a441 45%, var(--edge)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--SmartThemeBlurTintColor) 90%, transparent), inset 0 0 0 3px color-mix(in srgb, #d9a441 20%, transparent); }
+[data-world="cyberpunk"].nimo-rpg-bar { border-color: color-mix(in srgb, #2fe6ff 40%, var(--edge)); box-shadow: 0 0 0 1px color-mix(in srgb, #2fe6ff 12%, transparent), inset 0 1px 0 color-mix(in srgb, #2fe6ff 45%, transparent); }
+.nimo-rpg-bar button { font: inherit; color: inherit; }
+.nimo-rpg-main { display: flex; flex-direction: column; gap: 8px; }
+.nimo-rpg-fx { position: relative; }
+.nimo-rpg-fx:empty { display: none; }
+
+/* HUD: portrait with level ring · name · money and tools / HP and XP underneath */
+.nimo-rpg-hud { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "who id tools" "bars bars bars"; align-items: center; gap: 6px 10px; min-width: 0; }
+.r-who { grid-area: who; position: relative; width: 48px; height: 48px; margin-right: 8px; }
+.r-portrait { display: block; width: 48px; height: 48px; padding: 0; border: 2px solid var(--acc2); border-radius: 50%; overflow: hidden; background: var(--panel2); cursor: pointer; box-shadow: var(--glow); }
+[data-world="cyberpunk"] .r-portrait { border-radius: 6px; clip-path: polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); box-shadow: none; }
+.r-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.r-portrait.big { width: 72px; height: 72px; cursor: default; }
+.nimo-rpg-lv {
+    position: absolute; right: -8px; bottom: -6px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+    background: conic-gradient(var(--acc2) var(--xp, 0%), color-mix(in srgb, var(--txt) 18%, transparent) 0); display: grid; place-items: center; z-index: 1;
+}
+[data-world="cyberpunk"] .nimo-rpg-lv { border-radius: 4px; }
+.nimo-rpg-lv > span { width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); font-weight: 800; font-size: .78em; font-family: var(--r-num); }
+[data-world="cyberpunk"] .nimo-rpg-lv > span { border-radius: 2px; }
+.nimo-rpg-lv.ready { animation: r-ready 1.6s ease-in-out infinite; }
+.nimo-rpg-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.r-id { grid-area: id; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.nimo-rpg-name { font-family: var(--r-head); font-weight: 700; font-size: 1.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-id small { color: var(--dim); font-size: .78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-tools { grid-area: tools; display: flex; align-items: center; gap: 2px; }
+.nimo-rpg-money { display: inline-flex; align-items: center; gap: 5px; margin-right: 4px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); color: var(--gold); font-weight: 700; font-size: .88em; white-space: nowrap; }
+[data-world="cyberpunk"] .nimo-rpg-money { border-radius: 2px; }
+.nimo-rpg-icon {
+    position: relative; flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; background: none; border: 1px solid transparent;
+    border-radius: var(--r-radius); cursor: pointer; opacity: .9; transition: background .15s, border-color .15s;
+}
+.nimo-rpg-icon:hover, .nimo-rpg-icon:focus-visible { background: var(--panel2); border-color: var(--hair); opacity: 1; outline: none; }
+.nimo-rpg-icon.r-webbtn.ready { color: var(--gold); }
+.nimo-rpg-icon b { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--gold); color: #1b1608; font-size: .66em; display: grid; place-items: center; }
+.r-bars { grid-area: bars; display: flex; flex-direction: column; gap: 4px; }
+
+.nimo-rpg-hp, .r-hp {
+    position: relative; display: flex; align-items: center; height: 22px; border-radius: 999px; overflow: hidden;
+    background: color-mix(in srgb, #000 40%, transparent); border: 1px solid var(--hair);
+}
+[data-world="cyberpunk"] .nimo-rpg-hp { border-radius: 2px; }
+.nimo-rpg-hp-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #4ad37a, #1f9d52); transition: width .5s ease; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+[data-world="cyberpunk"] .nimo-rpg-hp-fill { background: repeating-linear-gradient(90deg, #2fe6a0 0 6px, #17b97a 6px 8px); }
+.nimo-rpg-hp.low .nimo-rpg-hp-fill { background: linear-gradient(180deg, #ef6a5a, #b32f2a); }
+[data-world="cyberpunk"] .nimo-rpg-hp.low .nimo-rpg-hp-fill { background: repeating-linear-gradient(90deg, #ff3e6a 0 6px, #b3203f 6px 8px); animation: r-blink 1.1s steps(2) infinite; }
+.r-hp-icon { position: relative; z-index: 1; margin-left: 8px; font-size: .78em; color: #fff; text-shadow: 0 1px 2px #000a; }
+.nimo-rpg-hp span { position: relative; z-index: 1; flex: 1; text-align: center; padding-right: 22px; font-size: .8em; font-weight: 800; font-family: var(--r-num); color: #fff; text-shadow: 0 1px 2px #000b; }
+.nimo-rpg-hp.big { height: 26px; }
+.r-xpthin { height: 5px; border-radius: 2px; background: color-mix(in srgb, var(--txt) 12%, transparent); overflow: hidden; }
+.r-xpthin i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, var(--gold)); transition: width .6s ease; }
+.nimo-rpg-xp { position: relative; height: 20px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, #000 40%, transparent); border: 1px solid var(--hair); margin: 6px 0 0; }
+[data-world="cyberpunk"] .nimo-rpg-xp { border-radius: 2px; }
+.nimo-rpg-xp-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #a87a0a, var(--gold)); transition: width .6s ease; }
+.nimo-rpg-xp span { position: relative; display: block; text-align: center; line-height: 18px; font-size: .74em; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000b; }
+
+/* ===== Choice cards ===== */
+.nimo-rpg-options { display: flex; flex-direction: column; gap: 8px; max-height: 48vh; max-height: 48dvh; overflow-y: auto; overscroll-behavior: contain; padding: 2px 1px; scrollbar-width: thin; }
+.nimo-rpg-options[hidden] { display: none; }
+.r-card {
+    position: relative; display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 9px 12px 9px 10px; text-align: left; cursor: pointer;
+    color: inherit; font: inherit; border: 1px solid var(--hair); border-left: 3px solid var(--tc, var(--acc2)); border-radius: var(--r-radius);
+    background: linear-gradient(100deg, color-mix(in srgb, var(--tc, var(--acc2)) 12%, var(--panel)), var(--panel) 62%);
+    transition: transform .1s ease, border-color .15s ease, box-shadow .15s ease, opacity .25s ease, filter .25s ease;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+[data-world="cyberpunk"] .r-card { border-radius: 2px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.r-card:hover, .r-card:focus-visible { border-color: var(--tc, var(--acc2)); box-shadow: var(--glow); outline: none; }
+[data-world="cyberpunk"] .r-card:hover { box-shadow: none; background: linear-gradient(100deg, color-mix(in srgb, var(--tc, var(--acc2)) 22%, var(--panel)), var(--panel) 70%); }
+.r-card:active { transform: scale(.985); }
+.r-medal {
+    width: 46px; height: 46px; display: grid; place-items: center; font-size: 1.25em; color: var(--tc, var(--acc2)); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tc, var(--acc2)) 30%, var(--panel)), color-mix(in srgb, var(--tc, var(--acc2)) 8%, var(--panel)));
+    border: 2px solid color-mix(in srgb, var(--tc, var(--acc2)) 60%, transparent);
+}
+[data-world="cyberpunk"] .r-medal { border-radius: 0; border: 0; background: color-mix(in srgb, var(--tc, var(--acc2)) 20%, var(--panel)); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); box-shadow: none; }
+.r-medal.locked { color: var(--dim); background: var(--panel2); border-color: var(--hair); }
+.r-body { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.nimo-rpg-text { line-height: 1.3; font-weight: 600; }
+.nimo-rpg-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.r-side { display: grid; place-items: center; }
+.r-safe-mark, .r-lock-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-size: .95em; }
+.r-safe-mark { color: var(--good); border: 2px solid color-mix(in srgb, var(--good) 55%, transparent); }
+.r-lock-mark { color: var(--dim); border: 2px dashed var(--hair); }
+.r-card.safe { --tc: var(--good); }
+.r-card.locked { --tc: var(--dim); cursor: not-allowed; filter: saturate(.35); opacity: .78; background: var(--panel); }
+.r-card.locked:hover { box-shadow: none; border-color: var(--hair); }
+.r-card.faded { opacity: .3; pointer-events: none; filter: saturate(.4); }
+.r-card.picked { border-color: var(--tc, var(--acc2)); box-shadow: var(--glow); transform: scale(1.01); }
+.r-card.check { border-left-width: 5px; background: linear-gradient(100deg, color-mix(in srgb, var(--tc) 24%, var(--panel)), var(--panel) 70%); }
+.r-card.check .r-medal { animation: r-ready 1.8s ease-in-out infinite; }
+.r-card.wide { grid-template-columns: 46px 1fr; --tc: var(--acc2); }
+.r-key { display: none; position: absolute; top: 0; left: 16px; transform: translateY(-50%); padding: 0 6px; border-radius: 4px; border: 1px solid var(--hair); background: var(--panel2); color: var(--dim); font: inherit; font-size: .66em; line-height: 1.6; }
+@media (hover: hover) and (pointer: fine) { .r-key { display: block; } }
+.nimo-rpg-own { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; min-height: 40px; background: none; border: 0; cursor: pointer; color: var(--dim); font-size: .9em; }
+.nimo-rpg-own:hover, .nimo-rpg-own:focus-visible { color: var(--txt); text-decoration: underline; outline: none; }
+.nimo-rpg-wait { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; color: var(--dim); }
+.r-pulse { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: var(--acc2); animation: r-spin 1.6s linear infinite; }
+
+.nimo-rpg-xpfloat { position: absolute; z-index: 3; translate: -50% -100%; pointer-events: none; white-space: nowrap; font-weight: 800; font-size: .9em; color: var(--gold); text-shadow: 0 1px 3px #000, 0 0 8px color-mix(in srgb, var(--gold) 60%, transparent); animation: r-float 1.8s ease-out forwards; }
+
+/* ===== Dice roll overlay (a native <dialog> in the top layer) ===== */
+dialog.r-dice, dialog.r-levelup { box-sizing: border-box; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 12px; border: 0; background: transparent; color: var(--txt); overflow: hidden; outline: none; }
+dialog.r-dice[open], dialog.r-levelup[open] { display: grid; place-items: center; }
+dialog.r-dice::backdrop, dialog.r-levelup::backdrop { background: rgba(4, 6, 10, .8); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+.r-dice { cursor: pointer; animation: r-fade .2s ease-out; }
+.r-dice.out { opacity: 0; transition: opacity .22s; }
+.r-dice-card { width: min(100%, 380px); box-sizing: border-box; padding: 18px 14px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: r-rise .3s cubic-bezier(.2, 1.3, .4, 1); }
+.r-dice-action { font-weight: 700; font-size: 1.02em; line-height: 1.3; max-width: 30ch; overflow-wrap: anywhere; }
+.r-dice-vs { font-size: .85em; color: var(--dim); }
+.r-dice-vs b { color: var(--txt); } .r-dice-vs small { margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--hair); }
+.r-dice-stage { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 132px; }
+.r-die { position: relative; width: 108px; height: 119px; display: grid; place-items: center; transform-origin: 50% 55%; }
+.r-die[hidden] { display: none; }
+.r-die-svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .6)); overflow: visible; }
+.r-die-body { stroke: var(--die-edge); stroke-width: 2.6; stroke-linejoin: round; }
+.r-die-edges polyline { fill: none; stroke: var(--die-edge); stroke-width: 1.6; opacity: .55; stroke-linejoin: round; }
+.r-die-num { position: relative; margin-top: 8px; font-family: var(--r-num); font-weight: 900; font-size: 2.5em; color: var(--die-num); font-variant-numeric: tabular-nums; }
+[data-world="cyberpunk"] .r-die-num { text-shadow: 0 0 10px var(--die-num); }
+[data-world="cyberpunk"] .r-die-svg { filter: drop-shadow(0 0 10px color-mix(in srgb, #2fe6ff 40%, transparent)); }
+.r-die.tumble { animation: r-tumble .55s linear infinite; }
+.r-die.landed { animation: r-land .38s cubic-bezier(.2, 1.7, .4, 1); }
+.r-die-main.high .r-die-svg { filter: drop-shadow(0 0 16px var(--gold)); }
+.r-die-main.low .r-die-svg { filter: drop-shadow(0 0 14px var(--bad)); }
+.r-die-extra { width: 82px; height: 90px; }
+.r-die-extra .r-die-num { font-size: 1.9em; }
+.r-die-extra.plus::before, .r-die-extra.minus::before { position: absolute; left: -16px; top: 38%; font-weight: 900; font-size: 1.6em; color: var(--txt); }
+.r-die-extra.plus::before { content: "+"; color: var(--gold); } .r-die-extra.minus::before { content: "−"; color: var(--bad); }
+.r-dice-first { font-size: .8em; color: #b99cff; padding: 3px 10px; border: 1px dashed color-mix(in srgb, #b99cff 55%, transparent); border-radius: 999px; }
+.r-dice-first[hidden], .r-dice-stamp[hidden] { display: none; }
+.r-dice-eq { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: 6px; min-height: 52px; }
+.r-term, .r-op { opacity: 0; transform: translateY(10px) scale(.9); transition: opacity .25s, transform .25s cubic-bezier(.2, 1.4, .4, 1); }
+.r-term.in, .r-op.in { opacity: 1; transform: none; }
+.r-term { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 52px; padding: 4px 8px; border-radius: var(--r-radius); background: var(--panel2); border: 1px solid var(--hair); }
+.r-term small { font-size: .6em; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.r-term b { font-family: var(--r-num); font-size: 1.2em; font-variant-numeric: tabular-nums; }
+.r-term.perk b { color: var(--good); } .r-term.total { border-color: var(--acc2); box-shadow: var(--glow); } .r-term.dc { border-style: dashed; }
+.r-op { align-self: center; color: var(--dim); font-weight: 700; }
+.r-dice-stamp { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border: 3px solid currentColor; border-radius: 8px; font-weight: 900; font-size: 1.35em; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-3deg); animation: r-stamp .4s cubic-bezier(.2, 1.8, .4, 1) both; }
+[data-world="cyberpunk"] .r-dice-stamp { border-radius: 2px; }
+.r-dice-stamp.success { color: var(--good); text-shadow: 0 0 12px color-mix(in srgb, var(--good) 50%, transparent); }
+.r-dice-stamp.failure { color: var(--bad); }
+.r-dice-stamp.critical { color: var(--gold); text-shadow: 0 0 18px var(--gold); box-shadow: 0 0 22px color-mix(in srgb, var(--gold) 50%, transparent), inset 0 0 14px color-mix(in srgb, var(--gold) 30%, transparent); }
+.r-dice-stamp.fumble { color: var(--bad); animation: r-stamp .4s cubic-bezier(.2, 1.8, .4, 1) both, r-shake .4s .35s; box-shadow: 0 0 18px color-mix(in srgb, var(--bad) 45%, transparent); }
+.r-dice.critical .r-dice-card { animation: r-rise .3s cubic-bezier(.2, 1.3, .4, 1), r-glowpulse 1s ease-in-out 3; }
+.r-dice.fumble .r-dice-card { animation: r-rise .3s cubic-bezier(.2, 1.3, .4, 1), r-shake .5s .1s; }
+.r-dice-cmp { font-family: var(--r-num); font-size: .85em; color: var(--dim); margin-top: -4px; }
+.r-dice-cmp[hidden] { display: none; }
+.r-dice-hint { font-size: .72em; color: var(--dim); }
+
+/* ===== Level up ===== */
+.r-levelup { animation: r-fade .25s ease-out; }
+.r-levelup.out { opacity: 0; transition: opacity .22s; }
+.r-lu-rays { position: absolute; width: 160vmax; height: 160vmax; left: 50%; top: 50%; translate: -50% -50%; opacity: .5; pointer-events: none; animation: r-spin 24s linear infinite;
+    background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--acc2) 40%, transparent) 0 6deg, transparent 6deg 18deg); -webkit-mask-image: radial-gradient(circle, #000 0, transparent 55%); mask-image: radial-gradient(circle, #000 0, transparent 55%); }
+.r-lu-card { position: relative; width: min(100%, 340px); box-sizing: border-box; padding: 22px 16px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: r-rise .45s cubic-bezier(.2, 1.5, .4, 1); box-shadow: var(--glow), 0 10px 40px rgba(0, 0, 0, .6); }
+.r-lu-icon { font-size: 1.8em; color: var(--gold); animation: r-bounce 1s ease-in-out 4; }
+.r-lu-card small { letter-spacing: .3em; font-weight: 800; color: var(--gold); }
+.r-lu-num { font-size: 4.2em; line-height: 1; font-weight: 900; font-family: var(--r-num); color: #fff; text-shadow: 0 0 24px var(--acc2), 0 0 4px var(--acc2); animation: r-pop .6s cubic-bezier(.2, 1.8, .4, 1); }
+.r-lu-card p { margin: 0; color: var(--dim); }
+.r-lu-pts { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--gold) 14%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); color: var(--gold); font-weight: 700; font-size: .9em; }
+.r-lu-actions { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 10px; }
+.r-lu-actions .menu_button { margin: 0; width: 100%; box-sizing: border-box; justify-content: center; min-height: 44px; }
+
+/* ===== Popups (maker, picker, sheet, web) ===== */
+dialog.nimo-rpg-dialog { border-radius: calc(var(--r-radius) + 4px); }
+[data-world="fantasy"].nimo-rpg-dialog { box-shadow: 0 0 0 1px color-mix(in srgb, #d9a441 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--SmartThemeBlurTintColor) 80%, transparent), 0 0 0 5px color-mix(in srgb, #d9a441 30%, transparent), 0 18px 50px rgba(0, 0, 0, .6); }
+[data-world="cyberpunk"].nimo-rpg-dialog { box-shadow: 0 0 0 1px color-mix(in srgb, #2fe6ff 55%, transparent), 0 0 24px color-mix(in srgb, #2fe6ff 25%, transparent), 0 18px 50px rgba(0, 0, 0, .6); }
+.nimo-rpg-sheet, .nimo-rpg-maker, .nimo-rpg-adventure, .nimo-tree-root { text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.nimo-rpg-scope h3 { margin: 0; font-size: 1.2em; }
+.nimo-rpg-scope h4 { margin: 6px 0 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .95em; padding-bottom: 4px; border-bottom: 1px solid var(--hair); color: var(--acc2); }
+.nimo-rpg-scope h4 small { color: var(--dim); font-weight: 400; }
+.r-maker-title { display: flex; align-items: center; gap: 12px; }
+.r-maker-title > i { flex: 0 0 auto; display: grid; place-items: center; width: 46px; height: 46px; font-size: 1.4em; color: var(--acc2); border: 2px solid var(--acc2); border-radius: 50%; box-shadow: var(--glow); }
+[data-world="cyberpunk"] .r-maker-title > i { border-radius: 4px; }
+.r-maker-title small { color: var(--dim); display: block; margin-top: 2px; line-height: 1.35; }
+.r-section { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--r-radius); background: var(--panel2); border: 1px solid var(--hair); }
+.r-section h4 { margin-top: 0; }
+.r-step { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 50%; background: var(--acc2); color: #11140f; font-size: .8em; font-weight: 800; }
+.r-cta { align-self: stretch; width: 100%; box-sizing: border-box; justify-content: center; min-height: 46px; margin: 0 !important; border-color: var(--acc2) !important; background: color-mix(in srgb, var(--acc2) 14%, transparent) !important; font-weight: 700; }
+.r-cta:hover { box-shadow: var(--glow); }
+
+.nimo-rpg-maker-top { display: flex; gap: 12px; align-items: center; }
+.nimo-rpg-maker-top .text_pole { margin: 0 0 6px; width: 100%; }
+.nimo-rpg-avatar { position: relative; flex: 0 0 auto; cursor: pointer; }
+.nimo-rpg-avatar img { display: block; width: 76px; height: 76px; border-radius: 50%; object-fit: cover; border: 2px solid var(--acc2); box-shadow: var(--glow); }
+[data-world="cyberpunk"] .nimo-rpg-avatar img { border-radius: 6px; }
+.nimo-rpg-avatar span { position: absolute; right: -2px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--edge); font-size: .8em; }
+.nimo-rpg-in-desc { width: 100%; resize: vertical; margin: 0; }
+.nimo-rpg-cheat { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-radius); border: 1px dashed var(--edge); cursor: pointer; }
+.nimo-rpg-cheat input { position: absolute; opacity: 0; pointer-events: none; }
+.nimo-rpg-cheat > span:last-child { display: flex; flex-direction: column; }
+.nimo-rpg-cheat small { opacity: .7; font-size: .82em; line-height: 1.35; }
+.nimo-rpg-switch { position: relative; flex: 0 0 auto; width: 44px; height: 26px; border-radius: 999px; background: color-mix(in srgb, #000 40%, transparent); border: 1px solid var(--edge); transition: background .2s; }
+.nimo-rpg-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--txt); transition: transform .2s; }
+.nimo-rpg-cheat input:checked + .nimo-rpg-switch { background: #ff5ad1; border-color: #ff5ad1; }
+.nimo-rpg-cheat input:checked + .nimo-rpg-switch::after { transform: translateX(18px); background: #fff; }
+.nimo-rpg-cheat input:focus-visible + .nimo-rpg-switch { outline: 2px solid var(--acc2); outline-offset: 2px; }
+.nimo-rpg-maker.cheat .nimo-rpg-cheat { border-color: #ff5ad1; box-shadow: 0 0 12px #ff5ad144; }
+.nimo-rpg-cheatbadge { display: inline-block; font-size: .85em; filter: drop-shadow(0 0 4px #ff5ad1); }
+
+.nimo-rpg-buildcard { display: flex; flex-direction: column; gap: 10px; }
+.nimo-rpg-buildhead { display: flex; justify-content: space-between; align-items: baseline; }
+.r-buildlabel { color: var(--dim); font-size: .85em; text-transform: uppercase; letter-spacing: .06em; }
+.nimo-rpg-buildpts b { color: var(--acc2); font-size: 1.5em; font-family: var(--r-num); }
+.nimo-rpg-buildpts b.fresh { color: var(--gold); }
+.nimo-rpg-maker.cheat .nimo-rpg-buildpts b { color: #ff5ad1; }
+.r-buildviz { display: flex; align-items: center; gap: 8px; }
+.r-radarbox { flex: 0 0 auto; display: grid; place-items: center; }
+.r-radarbox.small { width: 150px; }
+.nimo-rpg-buildstats { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; align-content: center; }
+.nimo-rpg-buildperks { display: flex; flex-wrap: wrap; gap: 4px; }
+.r-radar { display: block; max-width: 100%; height: auto; overflow: visible; }
+.r-radar-ring { fill: none; stroke: var(--hair); stroke-width: 1; }
+.r-radar-spoke { stroke: var(--hair); stroke-width: 1; }
+.r-radar-shape { fill: color-mix(in srgb, var(--acc2) 30%, transparent); stroke: var(--acc2); stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--acc2) 55%, transparent)); transition: all .3s; }
+.r-radar-dot { fill: var(--tc, var(--acc2)); }
+.r-radar-label { font-size: 11px; font-weight: 700; fill: var(--txt); font-family: var(--mainFontFamily); }
+.r-radar-val { fill: var(--acc2); font-weight: 800; }
+
+/* Sheet */
+.r-sheet-head { display: flex; align-items: center; gap: 14px; }
+.r-sheet-id { flex: 1; min-width: 0; }
+.r-sheet-id small { color: var(--dim); }
+.r-sheet-attrs { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; }
+.nimo-rpg-stats { flex: 1 1 220px; display: flex; flex-direction: column; gap: 6px; }
+.nimo-rpg-statrow { display: grid; grid-template-columns: 22px 1fr auto 1.6em; align-items: center; gap: 8px; }
+.nimo-rpg-statrow i { color: var(--tc); text-align: center; }
+.nimo-rpg-pips { display: flex; gap: 2px; }
+.nimo-rpg-pips u { width: 7px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--txt) 14%, transparent); text-decoration: none; }
+.nimo-rpg-pips u.on { background: var(--tc); box-shadow: 0 0 5px color-mix(in srgb, var(--tc) 60%, transparent); }
+.nimo-rpg-statval { text-align: right; font-weight: 800; font-family: var(--r-num); }
+.nimo-rpg-perklist, .nimo-rpg-items { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.r-perk, .nimo-rpg-items li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--hair); background: var(--panel2); font-size: .88em; }
+.r-perk { border-color: color-mix(in srgb, var(--tc) 55%, transparent); }
+.r-perk i { color: var(--tc); }
+.nimo-rpg-items li i { color: var(--dim); }
+[data-world="cyberpunk"] .r-perk, [data-world="cyberpunk"] .nimo-rpg-items li { border-radius: 2px; }
+.nimo-rpg-rolls { padding: 0; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.nimo-rpg-rolls li { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; border-left: 3px solid; background: var(--panel2); border-radius: 4px; }
+.nimo-rpg-rolls li.won { border-color: var(--good); } .nimo-rpg-rolls li.won i { color: var(--good); }
+.nimo-rpg-rolls li.lost { border-color: var(--bad); } .nimo-rpg-rolls li.lost i { color: var(--bad); }
+.nimo-rpg-rolls li b small { opacity: .6; font-weight: 400; }
+.nimo-rpg-note { font-size: .82em; margin: 2px 0 0; }
+.nimo-rpg-version { text-align: right; font-size: .7em; opacity: .5; margin: 0; }
+
+/* Adventure picker */
+.nimo-rpg-warn { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: var(--r-radius); border: 1px solid color-mix(in srgb, var(--mid) 55%, transparent); background: color-mix(in srgb, var(--mid) 10%, transparent); font-size: .92em; }
+.nimo-rpg-warn i { color: var(--mid); margin-top: 3px; }
+.nimo-rpg-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.r-world { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; min-height: 120px; text-align: center; cursor: pointer; border-radius: var(--r-radius); border: 1px solid var(--hair); overflow: hidden; }
+.r-world input { position: absolute; opacity: 0; pointer-events: none; }
+.r-world.fantasy { background: radial-gradient(circle at 50% 0%, rgba(217, 164, 65, .28), transparent 70%), var(--panel2); }
+.r-world.cyberpunk { background: radial-gradient(circle at 50% 0%, rgba(47, 230, 255, .26), transparent 60%), linear-gradient(180deg, transparent 60%, rgba(255, 62, 165, .16)), var(--panel2); border-radius: 3px; }
+.r-world-art { width: 48px; height: 48px; display: grid; place-items: center; font-size: 1.6em; border-radius: 50%; }
+.r-world.fantasy .r-world-art { color: #d9a441; border: 2px solid #d9a441; box-shadow: 0 0 14px rgba(217, 164, 65, .4); }
+.r-world.cyberpunk .r-world-art { color: #2fe6ff; border: 2px solid #2fe6ff; border-radius: 4px; box-shadow: 0 0 14px rgba(47, 230, 255, .45); }
+.r-world b { font-family: var(--mainFontFamily); }
+.r-world small { color: var(--dim); font-size: .78em; line-height: 1.3; }
+.r-world.selected.fantasy { border-color: #d9a441; box-shadow: 0 0 0 1px #d9a441 inset, 0 0 16px rgba(217, 164, 65, .3); }
+.r-world.selected.cyberpunk { border-color: #2fe6ff; box-shadow: 0 0 0 1px #2fe6ff inset, 0 0 16px rgba(47, 230, 255, .3); }
+.nimo-rpg-picks { display: flex; flex-direction: column; gap: 6px; max-height: 38vh; overflow-y: auto; }
+.r-pick { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; min-height: 58px; cursor: pointer; text-align: left; font: inherit; color: inherit; border-radius: var(--r-radius); border: 1px solid var(--hair); background: var(--panel2); }
+.r-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.r-pick > img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; border: 2px solid var(--hair); }
+.r-pick.selected { border-color: var(--acc2); box-shadow: 0 0 0 1px var(--acc2) inset, var(--glow); }
+.r-pick.selected > img { border-color: var(--acc2); }
+.r-pick-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.r-pick-text small { color: var(--dim); font-size: .78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-pick-radar { flex: 0 0 auto; width: 54px; }
+.nimo-rpg-pick-go { margin-left: auto; opacity: .7; }
+.nimo-rpg-new { align-self: flex-start; }
+
+/* ===== Skill web ===== */
+.nimo-tree-head { display: flex; align-items: center; gap: 12px; }
+.nimo-tree-head img { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2px solid var(--acc2); box-shadow: var(--glow); }
+[data-world="cyberpunk"] .nimo-tree-head img { border-radius: 6px; }
+.nimo-tree-head h3 { margin: 0; }
+.nimo-tree-points { display: flex; gap: 8px; }
+.nimo-tree-points span { flex: 1; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--r-radius); background: var(--panel2); border: 1px solid var(--hair); white-space: nowrap; }
+.nimo-tree-points b { margin-left: auto; font-size: 1.3em; font-family: var(--r-num); }
+.nimo-tree-points .has { border-color: var(--gold); box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 28%, transparent); }
+.nimo-tree-points .has b { color: var(--gold); }
+.nimo-tree-why { color: var(--bad); margin: 4px 0; font-size: .9em; }
+.nimo-web-tabs { position: sticky; top: -1px; z-index: 7; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 6px 0 4px; background: var(--panel); }
+.nimo-web-tab { position: relative; display: grid; grid-template-areas: "i v" "n n"; grid-template-columns: auto 1fr; align-items: center; justify-items: center; column-gap: 3px; padding: 5px 2px 4px; min-height: 52px; cursor: pointer; font: inherit; color: inherit; border-radius: var(--r-radius); background: var(--panel2); border: 1px solid var(--hair); transition: border-color .15s, box-shadow .15s; }
+.nimo-web-tab i { grid-area: i; color: var(--tc); justify-self: end; }
+.nimo-web-tab b { grid-area: v; font-size: 1.2em; justify-self: start; font-family: var(--r-num); }
+.nimo-web-tab span { grid-area: n; font-size: .62em; line-height: 1.1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
+.nimo-web-tab small { position: absolute; top: -5px; right: -3px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--tc); color: #10130f; font-size: .62em; font-weight: 800; display: grid; place-items: center; }
+.nimo-web-tab.on { border-color: var(--tc); box-shadow: 0 0 0 1px var(--tc) inset, 0 0 14px color-mix(in srgb, var(--tc) 38%, transparent); background: color-mix(in srgb, var(--tc) 12%, var(--panel2)); }
+.nimo-web-names { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4px; margin-top: 4px; font-family: var(--r-head); font-size: .74em; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tc); }
+.nimo-web-names span:first-child { text-align: left; } .nimo-web-names span:last-child { text-align: right; } .nimo-web-names .mid { opacity: .55; font-size: .9em; }
+.nimo-web-note { margin: 0; }
+.nimo-web {
+    position: relative; width: 100%; margin-top: 4px; border-radius: var(--r-radius); overflow: hidden; border: 1px solid color-mix(in srgb, var(--tc) 45%, var(--edge));
+    background:
+        radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--tc) 18%, transparent), transparent 62%),
+        radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--tc) 12%, transparent), transparent 55%),
+        linear-gradient(color-mix(in srgb, var(--tc) 7%, transparent) 1px, transparent 1px) 0 0 / 100% 46px,
+        linear-gradient(90deg, color-mix(in srgb, var(--tc) 5%, transparent) 1px, transparent 1px) 0 0 / 20% 100%,
+        var(--panel);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, .35);
+}
+.nimo-web-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.nimo-web-lines line { stroke: color-mix(in srgb, var(--txt) 18%, transparent); stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.nimo-web-lines line.open { stroke: color-mix(in srgb, var(--tc) 65%, transparent); stroke-dasharray: 2 7; }
+.nimo-web-lines line.on { stroke: var(--tc); filter: drop-shadow(0 0 4px var(--tc)); }
+.nimo-web-lines line.gate { stroke-width: 2px; stroke-dasharray: 1 6; opacity: .5; }
+.nimo-web-lines line.gate.on { stroke-dasharray: none; opacity: .75; }
+.nimo-hex { position: relative; width: 46px; height: 52px; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: color-mix(in srgb, var(--txt) 24%, transparent); transition: transform .15s ease, filter .2s; }
+.nimo-hex::before { content: ""; position: absolute; inset: 3px; clip-path: inherit; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--panel2) 100%, #fff 6%), var(--panel)); }
+.nimo-hex i, .nimo-hex b { position: relative; }
+.nimo-hex i { font-size: 1.2em; opacity: .5; }
+.nimo-node { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+.nimo-node-name { font-size: .6em; line-height: 1.1; max-width: 100%; text-align: center; font-weight: 600; text-shadow: 0 1px 3px #000; overflow-wrap: anywhere; }
+.nimo-web .nimo-node { position: absolute; translate: -50% -50%; width: 20%; z-index: 1; }
+.nimo-web .nimo-node.cap .nimo-hex { width: 62px; height: 70px; }
+.nimo-web .nimo-node.cap .nimo-hex i { font-size: 1.55em; }
+.nimo-web .nimo-node.rank .nimo-hex { width: 34px; height: 38px; }
+.nimo-web .nimo-node.rank .nimo-hex b { font-size: 1.05em; font-family: var(--r-num); opacity: .5; }
+.nimo-node:active .nimo-hex { transform: scale(.94); }
+.nimo-node.sel .nimo-hex { transform: scale(1.12); }
+.nimo-web .nimo-node.sel { z-index: 3; }
+.nimo-node.owned .nimo-hex { background: var(--tc); filter: drop-shadow(0 0 7px var(--tc)); }
+.nimo-node.owned .nimo-hex::before { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tc) 60%, #000), color-mix(in srgb, var(--tc) 24%, #000)); }
+.nimo-node.owned .nimo-hex i, .nimo-node.owned .nimo-hex b { opacity: 1; color: #fff; text-shadow: 0 0 6px var(--tc); }
+.nimo-node.available .nimo-hex { background: var(--tc); animation: r-node-pulse 1.6s ease-in-out infinite; }
+.nimo-node.available .nimo-hex i, .nimo-node.available .nimo-hex b { opacity: 1; color: var(--tc); }
+.nimo-node.nopoints .nimo-hex { background: color-mix(in srgb, var(--tc) 50%, var(--hair)); }
+.nimo-node.nopoints .nimo-hex i { opacity: .75; color: var(--tc); }
+.nimo-node.open .nimo-hex { background: color-mix(in srgb, var(--tc) 60%, var(--hair)); }
+.nimo-node.open .nimo-hex i { color: var(--tc); opacity: .8; }
+.nimo-node.locked { opacity: .5; }
+.nimo-web .nimo-node.base .nimo-hex::after { content: ""; position: absolute; bottom: 5px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px #fff; }
+.nimo-node.cap.available .nimo-hex, .nimo-node.cap.owned .nimo-hex { animation: r-node-pulse 1.4s ease-in-out infinite; }
+.nimo-node.just .nimo-hex { animation: r-node-unlock .7s cubic-bezier(.2, 1.5, .4, 1); }
+.nimo-node.just::after { content: ""; position: absolute; top: 3px; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--tc); pointer-events: none; animation: r-node-ring .8s ease-out forwards; }
+.nimo-web-detail { position: sticky; bottom: -1px; z-index: 6; margin-top: 8px; }
+.nimo-web-detail-card, .nimo-web-hint { padding: 10px 12px; border-radius: var(--r-radius); border: 1px solid var(--hair); margin: 0; background: var(--panel); box-shadow: 0 -8px 16px rgba(0, 0, 0, .35); }
+.nimo-web-hint { text-align: center; font-size: .9em; }
+.nimo-web-detail-card { border-left: 4px solid var(--tc); }
+.nimo-web-detail-card p { margin: 6px 0; }
+.nimo-web-detail-card .nimo-hex { background: var(--tc); width: 40px; height: 45px; }
+.nimo-tree-detail-head { display: flex; align-items: center; gap: 10px; }
+.nimo-tree-detail-head div { display: flex; flex-direction: column; }
+.nimo-tree-detail-head small { color: var(--dim); font-size: .8em; }
+.r-fx { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 6px; }
+.nimo-tree-buy, .nimo-tree-refund { width: 100%; justify-content: center; margin: 4px 0 0; min-height: 44px; }
+.nimo-tree-buy { background: color-mix(in srgb, var(--good) 24%, transparent) !important; border-color: var(--good) !important; font-weight: 700; }
+
+/* ===== Animations ===== */
+@keyframes r-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes r-rise { from { opacity: 0; transform: translateY(18px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes r-spin { to { transform: rotate(360deg); } }
+@keyframes r-tumble { 0% { transform: rotate(0) translateY(0) scale(1); } 20% { transform: rotate(80deg) translateY(-18px) scale(1.04); } 45% { transform: rotate(190deg) translateY(0) scale(.98); } 70% { transform: rotate(280deg) translateY(-12px) scale(1.03); } 100% { transform: rotate(360deg) translateY(0) scale(1); } }
+@keyframes r-land { 0% { transform: scale(1.35) rotate(-8deg); } 60% { transform: scale(.94) rotate(2deg); } 100% { transform: none; } }
+@keyframes r-stamp { 0% { opacity: 0; transform: rotate(-3deg) scale(2.2); } 100% { opacity: 1; transform: rotate(-3deg) scale(1); } }
+@keyframes r-shake { 0%, 100% { translate: 0; } 20% { translate: -6px; } 40% { translate: 6px; } 60% { translate: -4px; } 80% { translate: 4px; } }
+@keyframes r-glowpulse { 50% { box-shadow: 0 0 36px color-mix(in srgb, var(--gold) 55%, transparent); } }
+@keyframes r-pop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes r-bounce { 50% { transform: translateY(-6px); } }
+@keyframes r-ready { 50% { box-shadow: 0 0 14px var(--acc2); } }
+@keyframes r-blink { 50% { opacity: .55; } }
+@keyframes r-float { 0% { opacity: 0; transform: translateY(6px) scale(.8); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-28px) scale(1); } }
+@keyframes r-node-pulse { 0%, 100% { filter: drop-shadow(0 0 2px var(--tc)); } 50% { filter: drop-shadow(0 0 12px var(--tc)); } }
+@keyframes r-node-unlock { 0% { transform: scale(.5) rotate(-60deg); } 70% { transform: scale(1.2) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes r-node-ring { from { transform: scale(.6); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .r-dice, .r-dice-card, .r-levelup, .r-lu-card, .r-lu-rays, .r-lu-icon, .r-lu-num, .r-dice-stamp, .r-die, .r-pulse, .nimo-rpg-lv.ready, .r-card.check .r-medal,
+    .nimo-node.available .nimo-hex, .nimo-node.cap .nimo-hex, .nimo-node.just .nimo-hex, .nimo-node.just::after, .nimo-rpg-xpfloat, .nimo-rpg-hp.low .nimo-rpg-hp-fill { animation: none !important; }
+    .r-term, .r-op { transition: none; opacity: 1; transform: none; }
+    .nimo-rpg-hp-fill, .r-xpthin i, .nimo-rpg-xp-fill { transition: none; }
+}
+
+/* ===== Screen sizes ===== */
+@media (min-width: 700px) {
+    .nimo-rpg-options { display: grid; grid-template-columns: 1fr 1fr; }
+    .nimo-rpg-options > .nimo-rpg-wide, .nimo-rpg-options > .nimo-rpg-roll, .nimo-rpg-options > .nimo-rpg-own, .nimo-rpg-options > .nimo-rpg-wait { grid-column: 1 / -1; }
+    .nimo-rpg-own { justify-self: center; }
+    .nimo-hex { width: 54px; height: 60px; }
+    .nimo-web .nimo-node-name { font-size: .72em; }
+    .r-dice-card { width: 420px; max-width: 100%; }
+}
+@media (max-width: 400px) {
+    .nimo-rpg-bar { padding: 6px; }
+    .nimo-rpg-hud { gap: 5px 8px; }
+    .r-card { grid-template-columns: 42px 1fr auto; gap: 9px; padding: 8px 9px 8px 8px; }
+    .r-medal { width: 42px; height: 42px; }
+    .r-ring { width: 44px; height: 44px; }
+    .nimo-rpg-money { padding: 2px 6px; margin-right: 0; }
+    .nimo-rpg-icon { width: 36px; }
+    .nimo-rpg-settings { gap: 6px; }
+    .r-world { min-height: 108px; }
+    .r-radarbox.small { width: 128px; }
+    .nimo-web-tab span { font-size: .56em; }
+    .nimo-web .nimo-node-name { font-size: .56em; }
+}
+@media (max-width: 340px) {
+    .r-id small { display: none; }
+    .r-buildviz { flex-direction: column; }
+}
+
+/* Persona "Create" chooser */
+.nimo-rpg-adventure h3 { margin: 0 0 4px; }
+.nimo-rpg-adventure h4 { margin: 8px 0 2px; }
+.nimo-rpg-adventure .nimo-rpg-opt, .nimo-rpg-adventure .nimo-rpg-pick {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 10px 12px; margin: 0;
+    cursor: pointer; text-align: left; font: inherit; color: var(--SmartThemeBodyColor);
+    background: var(--panel2); border: 1px solid var(--hair); border-radius: var(--r-radius);
+    transition: border-color .15s, box-shadow .15s, transform .1s;
+}
+.nimo-rpg-adventure .nimo-rpg-opt:hover, .nimo-rpg-adventure .nimo-rpg-pick:hover,
+.nimo-rpg-adventure .nimo-rpg-opt:focus-visible, .nimo-rpg-adventure .nimo-rpg-pick:focus-visible { border-color: var(--acc2); box-shadow: var(--glow); outline: none; }
+.nimo-rpg-adventure .nimo-rpg-opt:active, .nimo-rpg-adventure .nimo-rpg-pick:active { transform: scale(.98); }
+.nimo-rpg-adventure .nimo-rpg-opt > i { flex: 0 0 auto; width: 1.4em; text-align: center; font-size: 1.4em; color: var(--acc2); }
+.nimo-rpg-adventure .nimo-rpg-text small { font-weight: 400; opacity: .75; }
+.nimo-rpg-adventure .nimo-rpg-pick > img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; border: 2px solid var(--hair); }
+.nimo-rpg-adventure .nimo-rpg-pick > span { display: flex; flex-direction: column; min-width: 0; }
+.nimo-rpg-adventure .nimo-rpg-pick small { opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Cards: never let text, chips or the ring run outside the card (ST gives buttons nowrap) */
+.r-card { box-sizing: border-box; max-width: 100%; white-space: normal; overflow: hidden; }
+.r-card *, .r-card { overflow-wrap: anywhere; }
+.r-card .nimo-rpg-text { display: block; white-space: normal; min-width: 0; }
+.r-body { min-width: 0; overflow: hidden; }
+.r-side { flex: 0 0 auto; }
+.nimo-rpg-chips > * { white-space: nowrap; max-width: 100%; }
+.nimo-rpg-settings .r-world:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* Choice cards: plain ST look. Neutral panels, no glow, no per-stat colors; only the success ring and difficulty carry color. */
+.r-card, [data-world="cyberpunk"] .r-card {
+    background: var(--SmartThemeBlurTintColor); border: 1px solid var(--SmartThemeBorderColor); border-left-width: 1px;
+    border-radius: 10px; clip-path: none; box-shadow: none; gap: 10px; min-height: 0; padding: 9px 11px 9px 9px;
+}
+.r-card:hover, .r-card:focus-visible, [data-world="cyberpunk"] .r-card:hover {
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor) 85%, var(--SmartThemeBodyColor) 10%); border-color: var(--SmartThemeBodyColor); box-shadow: none;
+}
+.r-card.picked { box-shadow: none; transform: none; border-color: var(--SmartThemeQuoteColor); }
+.r-card.check { background: var(--SmartThemeBlurTintColor); border-left-width: 1px; }
+.r-card.check .r-medal { animation: none; }
+.r-card .r-medal, [data-world="cyberpunk"] .r-card .r-medal {
+    width: 34px; height: 34px; font-size: 1em; clip-path: none; border-radius: 50%; box-shadow: none;
+    color: var(--SmartThemeBodyColor); background: color-mix(in srgb, var(--SmartThemeBodyColor) 8%, transparent); border: 1px solid var(--hair);
+}
+.r-card { grid-template-columns: 34px 1fr auto; }
+.r-card .nimo-rpg-text { font-weight: 500; }
+.r-card .r-tag { background: transparent; font-size: .72em; }
+.r-card .r-tag.dv, .r-card .r-tag.gate, .r-card .r-tag.safe { color: var(--dim); border-color: var(--hair); }
+.r-card .r-tag i { color: var(--dim) !important; }
+.r-card .r-tag em { color: var(--SmartThemeBodyColor); }
+.r-card .r-ring { width: 40px; height: 40px; filter: none; }
+.r-card .r-ring::before { inset: 4px; background: var(--SmartThemeBlurTintColor); }
+.r-card .r-ring b { font-size: .82em; font-weight: 600; }
+.r-card.locked { filter: none; opacity: .55; }
+@media (max-width: 480px) { .r-card { grid-template-columns: 34px 1fr auto; } .r-card .r-medal { width: 34px; height: 34px; } .r-card .r-ring { width: 40px; height: 40px; } }

@@ -1,0 +1,84 @@
+<!--TITLE Choices & dice -->
+<!--ICON fa-solid fa-dice-d20 -->
+<!--GROUP RPG mode -->
+<!--DESC How a choice card works, how the d10 roll is decided and your exact odds. -->
+                <style>
+@keyframes rg-dloop{0%,3%{opacity:0}6%,88%{opacity:1}94%,100%{opacity:0}}
+@keyframes rg-dtumble{0%,6%{transform:scale(.4) rotate(0)}12%{transform:scale(1.05) rotate(220deg)}22%{transform:scale(1) rotate(520deg)}28%,100%{transform:scale(1) rotate(720deg)}}
+@keyframes rg-df1{0%,8%{opacity:0}9%,15%{opacity:1}15.1%,100%{opacity:0}}
+@keyframes rg-df2{0%,15%{opacity:0}15.1%,21%{opacity:1}21.1%,100%{opacity:0}}
+@keyframes rg-df3{0%,21%{opacity:0}21.1%,27%{opacity:1}27.1%,100%{opacity:0}}
+@keyframes rg-df4{0%,27%{opacity:0}27.1%,88%{opacity:1}94%,100%{opacity:0}}
+@keyframes rg-deq1{0%,32%{opacity:0;transform:translateY(6px)}36%,88%{opacity:1;transform:none}94%,100%{opacity:0}}
+@keyframes rg-deq2{0%,42%{opacity:0;transform:translateY(6px)}46%,88%{opacity:1;transform:none}94%,100%{opacity:0}}
+@keyframes rg-deq3{0%,54%{opacity:0;transform:translateY(6px)}58%,88%{opacity:1;transform:none}94%,100%{opacity:0}}
+@keyframes rg-dstamp{0%,62%{opacity:0;transform:rotate(-4deg) scale(2.4)}67%{opacity:1;transform:rotate(-4deg) scale(.92)}70%,88%{opacity:1;transform:rotate(-4deg) scale(1)}94%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.rg-dicedemo [style*="animation"]{opacity:1 !important}.rg-dicedemo .rg-die-num:not(:last-child){display:none}}
+</style>
+<p>Each turn the AI offers <b>four choices</b>. Pick one and the app settles it with a die roll, then the AI narrates exactly what happened.</p>
+
+<h2>Anatomy of a choice card</h2>
+<div class="rg-demo rg-anat" role="img" aria-label="A choice card with four numbered parts: the attribute icon, the action text, the attribute and difficulty tags, and the success ring.">
+<div class="rg-cards" style="padding:22px 14px 14px">
+<span class="rg-pin p1" style="left:3px;top:11px">1</span><span class="rg-pin p2" style="left:62px;top:11px">2</span><span class="rg-pin p3" style="left:62px;bottom:3px">3</span><span class="rg-pin p4" style="right:10px;top:12px">4</span>
+<div class="rg-card "><div class="rg-medal"><i class="fa-solid fa-gear"></i></div><div><div class="t">Pick the lock before the guards return</div><div class="rg-tags"><span class="rg-tag"><i class="fa-solid fa-gear"></i> Craft <b>7</b> <span style="color:#6fd18a">+1</span></span><span class="rg-tag"><i class="fa-solid fa-scale-balanced"></i> Standard <b>DV 11</b></span></div></div><div class="rg-ring good" style="--p:80"><span>80%</span></div></div>
+</div></div>
+<ol class="rg-legend">
+<li><span class="k">1</span><span><b>The attribute</b> that decides this action. Each of the six attributes has its own colour in the app.</span></li>
+<li><span class="k">2</span><span><b>What you'd do.</b> The AI writes four short actions each turn: physical, clever, social and cautious.</span></li>
+<li><span class="k">3</span><span><b>Tags.</b> Your attribute and its value (<i>Craft 7</i>, with <span style="color:#6fd18a">+1</span> from a perk), and the <b>difficulty</b> with its target number, the <b>DV</b>.</span></li>
+<li><span class="k">4</span><span><b>The success ring.</b> Your exact chance, worked out from the same rules the die uses. Green is good odds, yellow risky, red long shot.</span></li>
+</ol>
+<p>Some cards are different: <b>No roll needed</b> choices always work, and <b>locked</b> choices show the attribute you're missing (some actions need, say, Strength 8 just to try). On a computer, press <b>1</b> to <b>4</b> to pick a card (not while you're typing).</p>
+
+<h2>The roll</h2>
+<p>A check is your <b>attribute + 1d10</b> against the difficulty. Tap a card and a die rolls on screen: die + attribute + perk bonuses = total, and the verdict is stamped on.</p>
+<div class="rg-demo rg-hero rg-dicedemo" style="min-height:0" role="img" aria-label="Animated dice roll: a die tumbles, then the maths is shown as die plus attribute plus perk bonus equals the total, compared with the difficulty, and the result is stamped.">
+<div style="position:relative;min-height:290px">
+<div class="rg-over" style="position:absolute;inset:0;background:transparent;animation:rg-dloop 12s infinite"><div class="rg-over-in" style="border:0;background:transparent;width:min(94%,360px);animation:none">
+  <div class="rg-act">Pick the lock before the guards return</div>
+  <div class="rg-die" style="animation:rg-dtumble 12s infinite"><span class="rg-die-num" style="animation:rg-df1 12s infinite">3</span><span class="rg-die-num" style="animation:rg-df2 12s infinite">9</span><span class="rg-die-num" style="animation:rg-df3 12s infinite">2</span><span class="rg-die-num" style="animation:rg-df4 12s infinite">6</span></div>
+  <div class="rg-eq"><span class="c" style="animation:rg-deq1 12s infinite;opacity:0">6 <small>die</small></span><span style="animation:rg-deq2 12s infinite;opacity:0">+</span><span class="c" style="animation:rg-deq2 12s infinite;opacity:0">7 <small>Craft</small></span><span style="animation:rg-deq2 12s infinite;opacity:0">+</span><span class="c" style="animation:rg-deq2 12s infinite;opacity:0">1 <small>perk</small></span><span style="animation:rg-deq3 12s infinite;opacity:0">=</span><span class="c" style="animation:rg-deq3 12s infinite;opacity:0">14 <small>vs DV 11</small></span></div>
+  <div class="rg-stamp" style="animation:rg-dstamp 12s infinite">Success</div>
+</div></div></div>
+<div class="rg-demo-cap"><i class="fa-solid fa-dice-d20"></i> The roll screen: die, attribute and perks add up against the difficulty.</div></div>
+<div class="wk-tablewrap"><table>
+<tr><th>Difficulty</th><th>You need a total of</th></tr>
+<tr><td><b>Easy</b></td><td>8</td></tr>
+<tr><td><b>Standard</b></td><td>11</td></tr>
+<tr><td><b>Hard</b></td><td>13</td></tr>
+<tr><td><b>Very hard</b></td><td>15</td></tr>
+</table></div>
+<p>Tap the roll screen to skip the animation and again to continue. Phones vibrate on the result. With <i>reduced motion</i> turned on, the die doesn't tumble.</p>
+
+<h3>Criticals and fumbles</h3>
+<div class="rg-two">
+<div class="rg-demo rg-loop" style="--T:9s"><div class="rg-chain"><div class="rg-mini-die gold rg-seq s1"><span>10</span></div><span class="op rg-seq s2">+</span><div class="rg-mini-die rg-seq s2"><span>6</span></div><span class="op rg-seq s3">+</span><div class="c rg-seq s3" style="padding:2px 10px;border:1px solid var(--SmartThemeBorderColor);border-radius:6px">7 Craft</div></div>
+<div class="rg-note"><span class="rg-stamp crit rg-seq s4" style="opacity:0;animation-name:rg-s4;font-size:1.1em">Critical · 23</span></div>
+<div class="rg-demo-cap"><i class="fa-solid fa-burst"></i> Natural 10: roll again and add it.</div></div>
+<div class="rg-demo rg-loop" style="--T:9s"><div class="rg-chain"><div class="rg-mini-die red rg-seq s1"><span>1</span></div><span class="op rg-seq s2">−</span><div class="rg-mini-die rg-seq s2"><span>4</span></div><span class="op rg-seq s3">+</span><div class="c rg-seq s3" style="padding:2px 10px;border:1px solid var(--SmartThemeBorderColor);border-radius:6px">7 Craft</div></div>
+<div class="rg-note"><span class="rg-stamp bad rg-seq s4" style="opacity:0;animation-name:rg-s4;font-size:1.1em">Fumble · 4</span></div>
+<div class="rg-demo-cap"><i class="fa-solid fa-triangle-exclamation"></i> Natural 1: roll again and subtract it.</div></div>
+</div>
+<p>A natural <b>10</b> is a <b>critical success</b>: roll again and add it, so a total can go well past 15. A natural <b>1</b> is a <b>fumble</b>: roll again and subtract it. Perks can make criticals easier (a 9 or even an 8 counts) or remove fumbles.</p>
+
+<h2>Your real odds</h2>
+<p>The ring on each card is not a guess: it's computed with the same rules the die uses. Here is how the chances look for different attribute values (with no perks):</p>
+<div class="rg-demo rg-odds" role="img" aria-label="Chances of success by difficulty for an attribute of 3, 5, 8 and 10.">
+<div><h5>Attribute 3 (a weak spot)</h5><div class="rg-orow"><span>Easy (8)</span><div class="rg-obar"><i style="--w:60;--c:#6fd18a"></i></div><b>60%</b></div><div class="rg-orow"><span>Standard (11)</span><div class="rg-obar"><i style="--w:30;--c:#e6c35c"></i></div><b>30%</b></div><div class="rg-orow"><span>Hard (13)</span><div class="rg-obar"><i style="--w:10;--c:#f0925a"></i></div><b>10%</b></div><div class="rg-orow"><span>Very hard (15)</span><div class="rg-obar"><i style="--w:10;--c:#ef6a5a"></i></div><b>10%</b></div></div>
+<div><h5>Attribute 5 (average)</h5><div class="rg-orow"><span>Easy (8)</span><div class="rg-obar"><i style="--w:80;--c:#6fd18a"></i></div><b>80%</b></div><div class="rg-orow"><span>Standard (11)</span><div class="rg-obar"><i style="--w:50;--c:#e6c35c"></i></div><b>50%</b></div><div class="rg-orow"><span>Hard (13)</span><div class="rg-obar"><i style="--w:30;--c:#f0925a"></i></div><b>30%</b></div><div class="rg-orow"><span>Very hard (15)</span><div class="rg-obar"><i style="--w:10;--c:#ef6a5a"></i></div><b>10%</b></div></div>
+<div><h5>Attribute 8 (a specialist)</h5><div class="rg-orow"><span>Easy (8)</span><div class="rg-obar"><i style="--w:90;--c:#6fd18a"></i></div><b>90%</b></div><div class="rg-orow"><span>Standard (11)</span><div class="rg-obar"><i style="--w:80;--c:#e6c35c"></i></div><b>80%</b></div><div class="rg-orow"><span>Hard (13)</span><div class="rg-obar"><i style="--w:60;--c:#f0925a"></i></div><b>60%</b></div><div class="rg-orow"><span>Very hard (15)</span><div class="rg-obar"><i style="--w:40;--c:#ef6a5a"></i></div><b>40%</b></div></div>
+<div><h5>Attribute 10 (a legend)</h5><div class="rg-orow"><span>Easy (8)</span><div class="rg-obar"><i style="--w:90;--c:#6fd18a"></i></div><b>90%</b></div><div class="rg-orow"><span>Standard (11)</span><div class="rg-obar"><i style="--w:90;--c:#e6c35c"></i></div><b>90%</b></div><div class="rg-orow"><span>Hard (13)</span><div class="rg-obar"><i style="--w:80;--c:#f0925a"></i></div><b>80%</b></div><div class="rg-orow"><span>Very hard (15)</span><div class="rg-obar"><i style="--w:60;--c:#ef6a5a"></i></div><b>60%</b></div></div>
+<div class="rg-demo-cap" style="margin:0 -14px"><i class="fa-solid fa-chart-simple"></i> Exact chances at the base rules. Perks can push them higher.</div></div>
+<p>Even a weak attribute keeps a small chance (a natural 10 explodes), and even a legend can fail (a natural 1). Pick your fights, or specialize.</p>
+
+<h2>Failing is part of the game</h2>
+<ul>
+    <li>Failing never ends the story. It costs something: health, money, time or a new complication.</li>
+    <li>At 0 health you're <b>down</b>: captured, rescued or waking up hurt, never dead.</li>
+    <li><b>The app rolls, not the AI.</b> The AI suggests choices, difficulties and what you gain or lose. NimoTavern checks and limits all of it, so the AI can't fudge a roll or invent impossible numbers.</li>
+    <li><b>Swiping keeps your roll.</b> A new swipe rewrites how the result is told, not the result. Health, money and items always follow the replies you keep, so deleting or swiping a message rolls its effects back too.</li>
+</ul>
+
+<h2>Free actions</h2>
+<p>Prefer to improvise? <b>Write your own action</b> in the message box as usual. If the outcome is uncertain, the AI asks for a roll and a single roll card appears, so even free actions follow the dice.</p>

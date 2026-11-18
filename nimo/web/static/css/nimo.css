@@ -97,7 +97,9 @@ body.nimo * { box-sizing: border-box; }
 .nimo-busy.show { display: flex; }
 
 .nimo-footer { text-align: center; padding: 24px 16px 32px; color: var(--SmartThemeEmColor); font-size: .88em; line-height: 1.7; }
-.nimo-footer a { color: var(--SmartThemeEmColor); }
+.nimo-footer a { color: var(--SmartThemeBodyColor); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; font-weight: 600; }
+.nimo-footer a:hover, .nimo-footer a:focus-visible { color: var(--SmartThemeQuoteColor, var(--SmartThemeBodyColor)); text-decoration-thickness: 2px; }
+.nimo-footer a[href="/source"], .nimo-footer a[href*="github.com"] { padding: 2px 4px; border-radius: 4px; background: color-mix(in srgb, var(--SmartThemeBodyColor) 12%, transparent); }
 
 @media (max-width: 600px) {
     .nimo-top { padding: 8px 10px; }

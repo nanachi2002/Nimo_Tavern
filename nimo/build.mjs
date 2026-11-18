@@ -183,6 +183,12 @@ export async function buildWeb({ minify = true } = {}) {
         external: ['../../../*'], outfile: path.join(mpOut, 'index.js'), minify, logLevel: 'info',
     });
     for (const f of ['manifest.json', 'style.css']) fs.copyFileSync(path.join(here, 'web/mp', f), path.join(mpOut, f));
+    // NimoLFM (the free roleplay model's connector) and RPG mode (prebuilt): plain files, served as SillyTavern extensions.
+    for (const dir of ['lfm', 'rpg']) {
+        const out = path.join(here, 'dist/public/nimo', dir);
+        fs.mkdirSync(out, { recursive: true });
+        for (const f of ['manifest.json', 'index.js', 'style.css']) fs.copyFileSync(path.join(here, 'web', dir, f), path.join(out, f));
+    }
     buildPages();
     buildWiki();
 }

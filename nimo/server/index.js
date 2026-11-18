@@ -21,6 +21,7 @@ import { createSealer } from './mp/seal.js';
 import { createEngine } from './mp/engine.js';
 import { createHub } from './mp/hub.js';
 import { createRoutes } from './mp/routes.js';
+import { createLfmRoutes } from './lfm.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '../..'); // SillyTavern fork root
@@ -565,7 +566,13 @@ app.use('/api/nimo/mp', (req, res, next) => {
     if (isPlayHost(req) || (req.method === 'GET' && req.path === '/inbox/count')) return next();
     res.status(403).json({ error: 'Multiplayer is on the play site', play: true });
 });
+app.get('/api/nimo/announcements', wrap(async (_req, res) => {
+    const { rows } = await pool.query('SELECT id, title, body, created_at FROM announcements ORDER BY created_at DESC, id DESC LIMIT 20');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ items: rows.map((r) => ({ id: Number(r.id), title: r.title, body: r.body, created: r.created_at })) });
+}));
 app.use('/api/nimo/mp', createRoutes({ engine: mpEngine, requireSession, requireClientHeader, limit, wrap }));
+app.use('/api/nimo/lfm', createLfmRoutes({ requireSession, limit, wrap, secret: CFG.secret, upstream: env('LFM_URL', 'http://127.0.0.1:8080') }));
 setInterval(() => mpEngine.housekeeping().catch((e) => console.error('[nimotavern] mp housekeeping:', e?.message?.slice(0, 200))), 60_000).unref();
 
 // ---------------------------------------------------------------------------
@@ -664,6 +671,12 @@ function buildDefaultsBundle() {
     // NimoTavern Multiplayer, served to SillyTavern as a global third-party extension (in memory, never per user).
     const mpDir = path.join(NIMO_DIST, 'nimo/mp');
     if (fs.existsSync(mpDir)) for (const f of fs.readdirSync(mpDir)) files.push({ path: 'nimo-multiplayer/' + f, vfs: '/public/scripts/extensions/third-party/nimo-multiplayer/' + f, text: fs.readFileSync(path.join(mpDir, f), 'utf8') });
+    // NimoLFM (free roleplay model connector), served the same way.
+    const lfmDir = path.join(NIMO_DIST, 'nimo/lfm');
+    if (fs.existsSync(lfmDir)) for (const f of fs.readdirSync(lfmDir)) files.push({ path: 'nimo-lfm/' + f, vfs: '/public/scripts/extensions/third-party/nimo-lfm/' + f, text: fs.readFileSync(path.join(lfmDir, f), 'utf8') });
+    // NimoTavern RPG mode, served the same way (everything it stores lives in the user's encrypted chats and settings).
+    const rpgDir = path.join(NIMO_DIST, 'nimo/rpg');
+    if (fs.existsSync(rpgDir)) for (const f of fs.readdirSync(rpgDir)) files.push({ path: 'nimo-rpg/' + f, vfs: '/public/scripts/extensions/third-party/nimo-rpg/' + f, text: fs.readFileSync(path.join(rpgDir, f), 'utf8') });
     // Built-in extension manifests (SillyTavern discovers extensions by listing this folder).
     const extDir = path.join(ROOT, 'public/scripts/extensions');
     for (const name of fs.readdirSync(extDir)) {

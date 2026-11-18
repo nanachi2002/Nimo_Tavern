@@ -1,0 +1,88 @@
+<!--TITLE NimoLFM (free model) -->
+<!--ICON fa-solid fa-feather-pointed -->
+<!--GROUP Connect & chat -->
+<!--DESC NimoLFM is a small roleplay AI fine-tuned by the Nimo team for NimoTavern. It's free for everyone using NimoTavern: no API key, no other account, nothing to pay. -->
+                <p>Most AI models need an API key from a provider that bills you. <b>NimoLFM doesn't.</b> It runs on Nimo's own hardware and you switch it on with one button. It's a small model, so it has real limits (read <a href="#limits">Limits</a> before you start), but for everyday roleplay it's quick and costs nothing.</p>
+
+<h2>Quick start</h2>
+<ol class="steps">
+    <li><b>Open API Connections</b> Click the <i class="fa-solid fa-plug"></i> plug icon.</li>
+    <li><b>Find the NimoLFM card</b> It sits at the top of the panel. The dot shows whether it's online and how many of its 3 lanes are in use.</li>
+    <li><b>Press "Use NimoLFM"</b> NimoTavern fills in the connection and settings for you and connects. When it says <i>Profile applied and connected</i>, you're done.</li>
+    <li><b>Chat</b> Pick a character and send a message as usual.</li>
+</ol>
+<p>To go back to your own provider (OpenRouter, OpenAI, your own PC…), press <b>Switch back to my own API</b> on the same card. Your previous connection and settings are restored.</p>
+
+<h2>What it is</h2>
+<ul>
+    <li><b>Base model:</b> <a href="https://huggingface.co/LiquidAI/LFM3-1.7B-Base" target="_blank" rel="noopener">LiquidAI LFM3-1.7B-Base</a> by Liquid AI, about 1.7 billion parameters, released under the <b>LFM Open License v1.0</b>.</li>
+    <li><b>What the Nimo team did:</b> a full fine-tune (every weight, not an add-on) on multi-turn roleplay, vivid prose, and long chats with big character cards and lorebooks, so it handles the kind of prompts NimoTavern sends.</li>
+    <li><b>Reads long chats:</b> up to 86,000 tokens of context. In our tests it found a plain fact buried in a very long prompt in nearly every try.</li>
+    <li><b>Free for anyone using NimoTavern.</b> It is not offered outside the app.</li>
+</ul>
+
+<h2>Privacy</h2>
+<div class="callout secure"><i class="fa-solid fa-shield-halved"></i><div><strong class="t">We don't collect your prompts</strong>
+<p>Your messages go from your browser to NimoTavern's server, which passes them straight to the model and streams the reply back. We don't store them, we don't log them, and there is no telemetry or analytics on what you write.</p></div></div>
+<p>Here is exactly what that means:</p>
+<ul>
+    <li><b>NimoTavern's server</b> never writes message text anywhere. Its only memory of NimoLFM is short-lived counters in RAM used to enforce the fair-use limits.</li>
+    <li><b>The model server</b> logs only timings and token counts, never text. To answer faster it keeps recent chats in RAM for a while; that cache is never written to disk and disappears when the server restarts.</li>
+    <li><b>Cloudflare</b> sits in front of NimoTavern, as it does for the whole site, so your traffic passes through their network encrypted in transit, like every other page.</li>
+    <li><b>Your chats</b> stay end-to-end encrypted in your own account, as always. NimoLFM only ever sees the part of the chat that is sent for a reply.</li>
+    <li>Models can be wrong or strange. Don't put secrets in a chat you wouldn't want an AI to read.</li>
+</ul>
+<p>Read the <a href="/wiki/security">full privacy explanation</a> for how the rest of NimoTavern works.</p>
+
+<h2>The locked profile</h2>
+<p>While NimoLFM is on, its connection and sampler settings are <b>locked</b> (greyed out) so you can't break them by accident. They are the values we found work best for this model:</p>
+<div class="wk-tablewrap"><table>
+<tr><th>Setting</th><th>Value</th></tr>
+<tr><td>Connection</td><td>Custom (OpenAI-compatible) through NimoTavern's own gateway, model <code>lfm3-rp</code>. The access key is created and refreshed for you automatically.</td></tr>
+<tr><td>Temperature</td><td>0.8</td></tr>
+<tr><td>Min-P</td><td>0.06</td></tr>
+<tr><td>Repetition penalty</td><td>1.06</td></tr>
+<tr><td>Context size</td><td>86,000 tokens</td></tr>
+<tr><td>Reply length</td><td>up to 450 tokens (the gateway never allows more than 1,024)</td></tr>
+</table></div>
+<p><b>Reply rules.</b> On every message NimoTavern quietly adds a short instruction to the end of what you send (it never shows up in your chat): only the character acts and never you, three paragraphs of about 150 words (first the action and scene in <code>*asterisks*</code>, then the character's speech in "quotes" with a small gesture, then what they feel or notice), with concrete detail and fresh wording, no emoji and no out-of-character notes. We tested many wordings on SillyTavern-style prompts and where to put them. At the end of your message they work far better than at the top of the prompt: replies went from about 30 words to about 150.</p>
+<p><b>Anti-repetition.</b> Small models tend to echo their own earlier replies as a chat gets long. NimoLFM runs with a repetition filter (the DRY sampler) that we set on the server. In our multi-turn tests it cut repeated phrases from 55% to under 10%, and replies that open with the same sentence from a third to none.</p>
+<p><b>Your preset and card prompts are paused.</b> A small model does badly with long prompts written for big models: jailbreaks, "thinking" rules, huge instruction lists. It can even repeat them back instead of answering. So while NimoLFM is on, NimoTavern uses its plain built-in <b>Default</b> preset and ignores the system prompt and post-history instructions that character cards bring along (the card's description, personality, scenario and lorebook are still used). If a card relies on those instructions, move the important parts into its description.</p>
+<p>The lock only applies while NimoLFM is on. Switch back to your own API and your own preset and settings are restored.</p>
+
+<h2>Limits</h2>
+<div class="callout warn"><i class="fa-solid fa-triangle-exclamation"></i><div><strong class="t">It's a small model</strong>
+<p>NimoLFM has 1.7 billion parameters. Big paid models have many times more. Expect good scenes, not miracles.</p></div></div>
+<ul>
+    <li><b>Weaker at complicated stories.</b> Tangled plots, many characters at once, long-term consistency, maths, code and obscure facts are all hard for it.</li>
+    <li><b>It can repeat itself, invent details or contradict the story.</b> Swipe, edit the reply, or nudge it in your next message.</li>
+    <li><b>Mostly English.</b> Other languages are hit and miss.</li>
+    <li><b>It writes fiction.</b> Don't rely on it for facts, advice or anything serious.</li>
+    <li><b>Replies are capped</b> at 1,024 tokens.</li>
+    <li><b>Fair use:</b> up to 40 messages a minute and 2 replies at once per account. Three replies are written at the same time across everyone; when all lanes are busy your message simply waits in line.</li>
+    <li><b>Best effort.</b> NimoLFM runs on one machine run by the Nimo team. It can be offline for maintenance or restarts. When that happens the card says so.</li>
+</ul>
+
+<h2>Getting the best results</h2>
+<ul>
+    <li><b>Write habits as rules, not descriptions.</b> "She swears only by 'saints of salt'" is mostly ignored. "Use the phrase 'saints of salt' whenever she curses" works. Start with <i>Always…</i>, <i>Never…</i> or <i>Use … whenever…</i>.</li>
+    <li><b>Plain facts are fine anywhere.</b> Names, places, who knows whom: NimoLFM finds them in a long character card or lorebook, even far from the end.</li>
+    <li><b>Use <a href="/wiki/world-info">World Info</a> for big settings.</b> Entries that only appear when their keywords come up keep the prompt short and put the right facts near your latest message, which is where this model pays most attention.</li>
+    <li><b>Keep important facts in the character card or the recent messages.</b> The chat can be long, but a short, focused card helps a small model.</li>
+    <li><b>Prefer short, clear messages.</b> Ask for one action or one reply at a time.</li>
+</ul>
+
+<h2>Troubleshooting</h2>
+<div class="wk-tablewrap"><table>
+<tr><th>What you see</th><th>What to do</th></tr>
+<tr><td>The card says <b>Offline right now</b></td><td>The model machine is down or restarting. Try again in a few minutes, or switch back to your own API.</td></tr>
+<tr><td><b>Busy: your message will wait in line</b></td><td>All three lanes are in use. Your reply starts as soon as one is free.</td></tr>
+<tr><td><b>Your NimoLFM session expired</b></td><td>Reload NimoTavern. The access key refreshes on its own, and again before each message if it is about to run out.</td></tr>
+<tr><td><b>The profile isn't fully applied yet</b></td><td>Press <b>Try again</b> on the card. If it keeps failing, switch back to your own API and on again.</td></tr>
+<tr><td>The reply is a strange rule or instruction instead of a roleplay answer</td><td>That text is coming from a preset, a character card or an extension, and a small model can repeat it back. NimoLFM already pauses your preset and card prompt overrides; if it still happens, check the card's description and any extensions that add prompts, and remove the instruction.</td></tr>
+<tr><td>"You already have two replies being written"</td><td>Wait for one to finish, or stop it with the stop button.</td></tr>
+<tr><td>"This chat is longer than NimoLFM's 86,000-token limit"</td><td>Trim the chat, or lower the context size in a chat that uses your own API.</td></tr>
+</table></div>
+
+<h2>Credits and license</h2>
+<p>NimoLFM is a fine-tune of <b>LFM3-1.7B-Base</b> by Liquid AI, used under the <a href="https://huggingface.co/LiquidAI/LFM3-1.7B-Base/blob/main/LICENSE" target="_blank" rel="noopener">LFM Open License v1.0</a>. Thank you to Liquid AI for releasing the base model, and to the authors of the open roleplay and writing datasets the fine-tune learned from.</p>

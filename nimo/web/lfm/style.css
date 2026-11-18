@@ -1,0 +1,36 @@
+/* NimoLFM card. Mobile-first: everything stacks, buttons are full width with 44px touch targets. */
+#nimolfm-card { box-sizing: border-box; width: 100%; max-width: 100%; margin: 8px 0 14px; padding: 12px; border: 1px solid var(--SmartThemeBorderColor, #444); border-radius: 10px; background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #222) 85%, transparent); overflow-wrap: anywhere; text-align: left; line-height: 1.4; }
+#nimolfm-card, #nimolfm-card * { box-sizing: border-box; }
+#nimolfm-card.on { border-color: var(--SmartThemeQuoteColor, #7a9); box-shadow: 0 0 0 1px color-mix(in srgb, var(--SmartThemeQuoteColor, #7a9) 40%, transparent); }
+#nimolfm-card .nimolfm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+#nimolfm-card .nimolfm-name { font-weight: 700; font-size: 1.15em; }
+#nimolfm-card .nimolfm-badge { font-size: .72em; padding: 2px 8px; border-radius: 999px; background: var(--SmartThemeQuoteColor, #7a9); color: #111; font-weight: 600; white-space: nowrap; }
+#nimolfm-card .nimolfm-badge.alt { background: transparent; color: inherit; border: 1px solid var(--SmartThemeBorderColor, #555); font-weight: 500; }
+#nimolfm-card .nimolfm-lead { margin: 8px 0; opacity: .92; }
+#nimolfm-card .nimolfm-status { margin: 6px 0 10px; font-size: .9em; opacity: .9; display: flex; align-items: center; gap: 6px; }
+#nimolfm-card .nimolfm-dot { flex: none; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #888; }
+#nimolfm-card .nimolfm-dot.on { background: #4caf7d; } #nimolfm-card .nimolfm-dot.busy { background: #e0a23a; } #nimolfm-card .nimolfm-dot.off { background: #d9534f; }
+/* SillyTavern's .menu_button shrinks to min-content inside flex rows: size it explicitly */
+#nimolfm-card .nimolfm-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+#nimolfm-card .nimolfm-actions .menu_button { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; margin: 0; padding: 10px 14px; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; text-align: center; white-space: normal; flex: 0 0 auto; }
+#nimolfm-card .nimolfm-note { font-size: .85em; opacity: .85; margin: 8px 0 0; }
+#nimolfm-card .nimolfm-more { margin-top: 10px; }
+#nimolfm-card .nimolfm-more summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+#nimolfm-card .nimolfm-more h4 { margin: 12px 0 4px; }
+#nimolfm-card .nimolfm-more p { margin: 4px 0; }
+#nimolfm-card .nimolfm-more ul { margin: 4px 0 4px 0; padding-left: 18px; }
+#nimolfm-card .nimolfm-more li { margin: 4px 0; }
+#nimolfm-card a { color: var(--SmartThemeQuoteColor, #7a9); }
+@media (min-width: 600px) { #nimolfm-card { padding: 14px 16px; } #nimolfm-card .nimolfm-actions { flex-direction: row; } #nimolfm-card .nimolfm-actions .menu_button { width: auto; min-width: 240px; } }
+/* locked profile: show it, don't hide it */
+body.nimolfm-locked #chat_completion_source,
+body.nimolfm-locked #custom_api_url_text,
+body.nimolfm-locked #custom_model_id,
+body.nimolfm-locked #settings_preset_openai,
+body.nimolfm-locked #temp_openai, body.nimolfm-locked #top_p_openai, body.nimolfm-locked #min_p_openai,
+body.nimolfm-locked #repetition_penalty_openai, body.nimolfm-locked #freq_pen_openai, body.nimolfm-locked #pres_pen_openai,
+body.nimolfm-locked #openai_max_context { opacity: .55; cursor: not-allowed; }
+#nimolfm-card .nimolfm-ok, #nimolfm-card .nimolfm-warn { font-size: .85em; margin: 8px 0 0; }
+#nimolfm-card .nimolfm-ok { color: #4caf7d; }
+#nimolfm-card .nimolfm-warn { color: #e0a23a; padding: 8px 10px; border: 1px solid #e0a23a; border-radius: 8px; }
+#nimolfm-card .nimolfm-warn .menu_button { display: inline-flex; width: auto; min-height: 36px; margin-top: 8px; padding: 6px 14px; }
