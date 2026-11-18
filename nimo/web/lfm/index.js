@@ -144,9 +144,16 @@
     const RULES_MARK = 'Write exactly 3 paragraphs';
     function rules() {
         const c = ctx();
-        const user = c.name1 || 'the user';
+        // The user may have written this chat under another persona name than the current one (old chats, renamed persona).
+        // Every name the user wrote messages under is theirs: the latest is used in the text, the others are listed as aliases.
+        const seen = [];
+        for (const m of [...(c.chat || [])].reverse()) if (m && m.is_user && !m.is_system && m.name && !seen.includes(m.name)) seen.push(m.name);
+        if (c.name1 && !seen.includes(c.name1)) seen.push(c.name1);
+        const names = seen.slice(0, 4);
+        const user = names[0] || 'the user';
+        const who = names.length > 1 ? `${user} (also called ${names.slice(1).join(', ')})` : user;
         const ch = c.groupId ? 'the speaking character' : (c.name2 || 'the character');
-        return `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
+        return `[Only ${ch} acts in this reply: ${who} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
     }
     globalThis.nimoLfmInterceptor = async function (chat, _ctxSize, _abort, type) {
         if (!cfg().enabled) return;

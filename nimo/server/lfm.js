@@ -29,7 +29,7 @@ const MAX_MESSAGES = 3000;
 // Same text as the extension's rules (variant "X10"); keep the two in sync.
 const RULES_MARK = 'Write exactly 3 paragraphs';
 const REACT_MARK = 'First react directly to';
-const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`;
+const replyRules = (ch, who) => { const user = userNames(who)[0] || who; return `[Only ${ch} acts in this reply: ${who} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`; };
 
 // ---- "Never write for the user", enforced.
 // The rules alone still let a 1.7B model narrate the user's persona now and then. So the reply is checked sentence by sentence
@@ -54,8 +54,11 @@ const roleplayUser = (messages) => roleplayNames(messages)?.user || null;
 // The model talking ABOUT the task instead of roleplaying ("<think>We need to produce… The user is playing…").
 const META = /<\/?think|<\/?reasoning|\bthe user\b|\bwe need to\b|\b(?:3|three) paragraphs\b|\bin asterisks\b|\bout-of-character\b/i;
 const reEsc =(s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// "Haruka (also called Nana, Nanachi)" -> ['Haruka', 'Nana', 'Nanachi']: every name the user writes under.
+export const userNames = (field) => { const m = String(field).match(/^(.*?)(?: \(also called (.*)\))?$/); return [m[1], ...(m[2] ? m[2].split(', ') : [])].map((n) => n.trim()).filter(Boolean); };
 export function makeUserGuard(user) {
-    const names = [...new Set([user, user.split(/\s+/)[0]])].filter((n) => n.length >= 2).map(reEsc);
+    const all = userNames(user);
+    const names = [...new Set(all.flatMap((n) => [n, n.split(/\s+/)[0]]))].filter((n) => n.length >= 2).map(reEsc);
     if (!names.length) return null;
     const N = `(?:${names.join('|')})`;
     const VERB = `[a-z]+(?:ed|s)\\b`;        // "stammered", "looks", "trembles": the user doing something
