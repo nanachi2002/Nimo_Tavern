@@ -35,10 +35,19 @@ const replyRules = (ch, user) => `[Only ${ch} acts in this reply: ${user} is pla
 // BEFORE it is sent: a sentence that makes the user act or speak is thrown away and the model rewrites from the last good
 // sentence (the good part is sent back as the start of its reply). Nothing written for the user reaches the screen.
 const NAMES_RE = /Write (.{1,60}?)'s next reply in a fictional chat between .{1,60}? and (.{1,60}?)\./;
+// Names come from (1) the reply rules the extension adds ("[Only Silvia acts in this reply: Haruka is played by the user"),
+// or (2) the clean preset's main prompt. A user's own preset may have neither, so both are tried.
+const RULES_NAMES_RE = /\[Only (.{1,60}?) acts in this reply: (.{1,60}?) is played by the user/;
 function roleplayNames(messages) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role !== 'user') continue;
+        const r = messages[i].content.match(RULES_NAMES_RE);
+        if (r && r[2] !== 'the user') return { ch: r[1].trim(), user: r[2].trim(), from: 'rules' };
+        break;
+    }
     const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
     const m = sys.match(NAMES_RE);
-    return m ? { ch: m[1].trim(), user: m[2].trim() } : null;
+    return m ? { ch: m[1].trim(), user: m[2].trim(), from: 'preset' } : null;
 }
 const roleplayUser = (messages) => roleplayNames(messages)?.user || null;
 // The model talking ABOUT the task instead of roleplaying ("<think>We need to produce… The user is playing…").
@@ -263,6 +272,7 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
         // The NimoLFM extension appends the reply rules to the last user message. If a client didn't (old cached code, another
         // extension rewrote the message), add them here, so every user gets the format the model was tuned for.
         const lastUser = messages[messages.length - 1];
+        const hadRules = lastUser.role === 'user' && lastUser.content.includes(RULES_MARK);
         if (lastUser.role === 'user' && !lastUser.content.includes(RULES_MARK)
             && !/\[Pause your roleplay|from the point of view of|impersonat/i.test(lastUser.content.slice(-2000))) {   // summaries, impersonate
             const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
@@ -294,7 +304,10 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
         let released = false;
         const release = () => { if (!released) { released = true; const n = (inflight.get(uid) || 1) - 1; if (n <= 0) inflight.delete(uid); else inflight.set(uid, n); } };
 
-        const userName = roleplayUser(messages);
+        const names = roleplayNames(messages);
+        const userName = names?.user || null;
+        // Diagnostics without content: only WHERE the names were found and whether the client added the rules.
+        console.log(`[nimolfm] guard names=${names ? names.from : 'none'} clientRules=${hadRules} msgs=${messages.length}`);
         guardedReply({ up, body, wantStream: b.stream === true, violates: userName ? makeUserGuard(userName) : null, res, release });
     });
 
