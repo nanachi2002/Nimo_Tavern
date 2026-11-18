@@ -65,8 +65,10 @@ export function makeUserGuard(user) {
     const start = new RegExp(`^[\\s*_~(]*${N}(?:'s\\s+[a-z]+)?\\s+[a-z]`);                            // sentence starts with the user acting
     const attrib = new RegExp(`Q[\\s*,.!?…-]*${N}\\s+[a-z]`);                                          // "…," Haruka said
     const clause = new RegExp(`(?:[,;:—–]|\\b(?:and|while|as|when|before|after|until|then|so))\\s+${N}(?:'s\\s+[a-z]+)?\\s+${VERB}`);
+    // speech where someone introduces themselves as the user ("I'm Haruka", "my name is Haruka") = the AI speaking as the user
+    const selfIntro = new RegExp(`["“][^"”]*\\b(?:I'm|I am|my name is|my name's|call me|it's me,?)\\s+${N}\\b`, 'i');
     return (sentence) => {
-        if (META.test(sentence)) return true;
+        if (META.test(sentence) || selfIntro.test(sentence)) return true;
         const t = sentence.replace(/"[^"\n]*"|“[^”\n]*”/g, 'Q').replace(/["“][^"”\n]*$/, 'Q');   // only narration counts, not speech
         return start.test(t) || attrib.test(t) || clause.test(t);
     };
@@ -90,11 +92,50 @@ export function takeSentences(text) {
 }
 const MAX_REWRITES = 4;
 const ENOUGH_WORDS = 90;                    // when the reply is already this long, a violation just ends it
-function guardedReply({ up, body, wantStream, violates, res, release }) {
+// ---- the checker model: a fine-tuned Qwen3-0.6B on the same machine that answers one question per sentence:
+// "is the AI writing the user's character here?" It catches what the name guard can't ("...," she stammered).
+// On unseen test scenes: ~85% of such sentences caught (79% when both characters are "she"), ~1.2% of good ones wrongly flagged, ~80 ms per check.
+// Nothing is stored; if it is down or slow, replies go on with the name guard alone.
+const CHECK_THRESHOLD = 0.95;
+let checkerDownUntil = 0;
+const hasNarration = (s) => /[A-Za-z]/.test(s.replace(/"[^"\n]*"|“[^”\n]*”/g, '').replace(/["“][^"”\n]*$/, ''));
+export function makeChecker(url, user, ch) {
+    const u = new URL(url);
+    const ask = (s, ctx) => `Roleplay check. ${user} is the USER's character. ${ch} is the AI's character.\n`
+        + `Earlier in the AI's reply:\n"""${ctx || '(start of reply)'}"""\nNext sentence of the AI's reply:\n"""${s}"""\n`
+        + `Question: in the next sentence, does the AI write ${user}'s own words, actions, thoughts or feelings (as if the AI were playing ${user})? `
+        + `${ch} speaking, acting, or looking at or touching ${user} is NO. Answer with one word: YES or NO.`;
+    return (sentence, ctx) => new Promise((resolve) => {
+        const s = sentence.trim();
+        if (!s || !hasNarration(s) || Date.now() < checkerDownUntil) return resolve(false);
+        const payload = Buffer.from(JSON.stringify({ messages: [{ role: 'user', content: ask(s, ctx) }], max_tokens: 1, temperature: 0,
+            logprobs: true, top_logprobs: 10, chat_template_kwargs: { enable_thinking: false } }));
+        let settled = false;
+        const done = (v, down) => { if (settled) return; settled = true; if (down) checkerDownUntil = Date.now() + 30_000; resolve(v); };
+        const q = http.request({ host: u.hostname, port: u.port, path: '/v1/chat/completions', method: 'POST', timeout: 1500,
+            headers: { 'Content-Type': 'application/json', 'Content-Length': payload.length } }, (r) => {
+            let b = ''; r.setEncoding('utf8'); r.on('data', (c) => { b += c; });
+            r.on('end', () => {
+                try {
+                    const tops = JSON.parse(b).choices[0].logprobs.content[0].top_logprobs;
+                    let y = 0, n = 0;
+                    for (const t of tops) { const w = t.token.trim().toUpperCase(); if (w.startsWith('Y')) y += Math.exp(t.logprob); else if (w.startsWith('N')) n += Math.exp(t.logprob); }
+                    done(y + n > 0 && y / (y + n) >= CHECK_THRESHOLD, false);
+                } catch { done(false, true); }
+            });
+        });
+        q.on('timeout', () => { q.destroy(); done(false, true); });
+        q.on('error', () => done(false, true));
+        q.end(payload);
+    });
+}
+
+function guardedReply({ up, body, wantStream, violates, check, res, release }) {
     const id = 'chatcmpl-' + crypto.randomBytes(9).toString('base64url'), created = Math.floor(Date.now() / 1000);
     const base = body.messages;
     const lastIsAssistant = base[base.length - 1].role === 'assistant';      // "Continue": the reply goes on from that message
     let sent = '', rewrites = 0, done = false, current = null, started = false;
+    const why = [];                          // counts only, for the log line (never text)
     const words = (s) => (s.match(/\S+/g) || []).length;
     const chunk = (delta, finish = null) => 'data: ' + JSON.stringify({ id, object: 'chat.completion.chunk', created, model: MODEL_ID, choices: [{ index: 0, delta, finish_reason: finish }] }) + '\n\n';
     function begin() {
@@ -102,9 +143,12 @@ function guardedReply({ up, body, wantStream, violates, res, release }) {
         res.status(200); res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Accel-Buffering', 'no');
         res.write(chunk({ role: 'assistant', content: '' }));
     }
-    function emit(text) { if (!text) return; sent += text; if (wantStream) { begin(); res.write(chunk({ content: text })); } }
+    const said = [];                         // sentences already sent (context for the checker, like in its training)
+    const recent = () => said.slice(-3).join(' ').slice(-600);
+    function emit(text) { if (!text) return; sent += text; if (text.trim()) said.push(text.trim()); if (wantStream) { begin(); res.write(chunk({ content: text })); } }
     function finish() {
         if (done) return; done = true; release();
+        console.log(`[nimolfm] reply words=${words(sent)} cuts=${why.join(',') || 'none'}`);
         try { current?.destroy(); } catch {}
         if (wantStream) { begin(); res.write(chunk({}, 'stop')); res.end('data: [DONE]\n\n'); }
         else res.json({ id, object: 'chat.completion', created, model: MODEL_ID, choices: [{ index: 0, message: { role: 'assistant', content: sent.trimEnd() }, finish_reason: 'stop' }] });
@@ -138,11 +182,27 @@ function guardedReply({ up, body, wantStream, violates, res, release }) {
                 if (words(sent) >= ENOUGH_WORDS || rewrites >= MAX_REWRITES) return finish();
                 rewrites++; attempt();
             };
+            // Sentences wait in a queue: each is checked (name guard, then the checker model) before it is sent.
+            let queue = [], busy = false, ended = false;
+            const pump = async () => {
+                if (busy) return; busy = true;
+                while (queue.length && !cut && !done) {
+                    const s = queue.shift();
+                    let bad = violates ? violates(s) : false;
+                    if (bad) why.push('name');
+                    else if (check) { bad = await check(s, recent()); if (bad) why.push('check@' + said.length); }
+                    if (cut || done) break;
+                    if (bad) { busy = false; queue = []; return onViolation(); }
+                    emit(s);
+                }
+                busy = false;
+                if (ended && !queue.length && !cut && !done) finish();
+            };
             const feed = (text) => {
                 pending += text;
                 const [sentences, rest] = takeSentences(pending);
                 pending = rest;
-                for (const s of sentences) { if (violates && violates(s)) return onViolation(); emit(s); }
+                if (sentences.length) { queue.push(...sentences); pump(); }
             };
             ur.setEncoding('utf8');
             ur.on('data', (c) => {
@@ -158,8 +218,10 @@ function guardedReply({ up, body, wantStream, violates, res, release }) {
             });
             ur.on('end', () => {
                 if (cut || done) return;
-                if (pending.trim()) { if (violates && violates(pending)) return onViolation(); emit(pending); pending = ''; }
-                finish();
+                ended = true;
+                if (pending.trim()) queue.push(pending);
+                pending = '';
+                pump();
             });
             ur.on('error', () => { if (!cut) finish(); });
         });
@@ -175,6 +237,8 @@ const clamp = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n)
 export function createLfmRoutes({ requireSession, limit, wrap, secret, count = () => {}, upstream = 'http://127.0.0.1:8080' }) {
     if (!secret || String(secret).length < 32) throw new Error('NimoLFM: secret required');
     const up = new URL(upstream);
+    // the checker model runs next to the main model (port 8081); LFM_CHECK_URL=off disables it
+    const CHECK_URL = process.env.LFM_CHECK_URL === 'off' ? null : (process.env.LFM_CHECK_URL || `${up.protocol}//${up.hostname}:8081`);
     const r = express.Router();
     const json = express.json({ limit: '2mb' });
     const perUser = (name, max, ms) => limit(name, max, ms, (req) => 'u' + req.session.userId);
@@ -316,9 +380,8 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
 
         const names = roleplayNames(messages);
         const userName = names?.user || null;
-        // Diagnostics without content: only WHERE the names were found and whether the client added the rules.
-        console.log(`[nimolfm] guard names=${names ? names.from : 'none'} clientRules=${hadRules} msgs=${messages.length}`);
-        guardedReply({ up, body, wantStream: b.stream === true, violates: userName ? makeUserGuard(userName) : null, res, release });
+                const check = userName && CHECK_URL ? makeChecker(CHECK_URL, userNames(userName)[0], names.ch) : null;
+        guardedReply({ up, body, wantStream: b.stream === true, violates: userName ? makeUserGuard(userName) : null, check, res, release });
     });
 
     return r;
