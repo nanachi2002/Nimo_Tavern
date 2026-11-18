@@ -12,7 +12,22 @@
     // A 1.7B model does badly with prompts written for big models (jailbreaks, "thinking" rules, huge instructions): it can
     // even repeat them back as its reply. So while NimoLFM is on we use SillyTavern's plain built-in preset and ignore the
     // system prompt / post-history instructions that character cards bring along. The user's own choices are restored on switch-back.
-    const SAFE_PRESET = 'Default';
+    // Users can save over "Default" (people paste big presets into it), so NimoLFM keeps its OWN preset, rewritten once per page
+    // load from SillyTavern's untouched built-in Default.
+    const SAFE_PRESET = 'NimoLFM';
+    const PRISTINE_URL = '/nimo-defaults/content/presets/openai/Default.json';
+    let cleanWritten = false, cleanJob = null;
+    function writeCleanPreset() {        // one write at a time (the preset change it causes can re-trigger enforce)
+        if (cleanWritten) return Promise.resolve(true);
+        return cleanJob ??= (async () => {
+            try {
+                const r = await fetch(PRISTINE_URL, { cache: 'no-store' });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                await ctx().getPresetManager('openai').savePreset(SAFE_PRESET, await r.json());   // saves AND selects it
+                await sleep(1200); cleanWritten = true; return true;
+            } catch (e) { console.warn('[NimoLFM] clean preset', e); return false; } finally { cleanJob = null; }
+        })();
+    }
     // "Start Reply With" (Advanced Formatting) is sent as the beginning of the AI's reply, so the model continues whatever it
     // says; presets made for big models often put "thinking" rules there, which then show up as the reply. Cleared while on.
     // NimoLFM never "thinks", so reasoning auto-parse is off too: otherwise a stray <think> puts the whole reply in the thinking box.
@@ -47,6 +62,7 @@
         setVal('main_api', 'openai');
         const c = cfg();                  // saves made by an older version lack newer fields: keep the user's value before overwriting it
         if (c.saved) for (const id of SAVE_IDS) if (!(id in c.saved)) { c.saved[id] = getVal(id); save(); }
+        await writeCleanPreset();
         const safe = presetOpt(SAFE_PRESET);
         if (safe && getVal('settings_preset_openai') !== safe.value) { setVal('settings_preset_openai', safe.value); await sleep(1200); } // loading a preset rewrites the sliders
         for (const [id, v] of Object.entries(FLAGS)) setVal(id, v);
@@ -83,7 +99,8 @@
         const bad = [];
         const want = { main_api: 'openai', chat_completion_source: 'custom', custom_api_url_text: url(), custom_model_id: MODEL };
         for (const [id, v] of Object.entries(want)) if (getVal(id) !== v) bad.push(`${id} is "${getVal(id)}", expected "${v}"`);
-        if (presetOpt(SAFE_PRESET) && presetName() !== SAFE_PRESET) bad.push(`preset is "${presetName()}", expected "${SAFE_PRESET}"`);
+        if (!cleanWritten) bad.push('the clean NimoLFM preset could not be set up');
+        else if (presetName() !== SAFE_PRESET) bad.push(`preset is "${presetName()}", expected "${SAFE_PRESET}"`);
         for (const [id, v] of Object.entries(FLAGS)) if (getVal(id) !== v) bad.push(`${id} is ${getVal(id)}, expected ${v}`);
         if (!cfg().tokenAt) bad.push('no access token yet');
         return problem ? [problem, ...bad] : bad;
