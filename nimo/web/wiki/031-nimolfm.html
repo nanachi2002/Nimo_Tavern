@@ -7,7 +7,7 @@
 <h2>Quick start</h2>
 <ol class="steps">
     <li><b>Open API Connections</b> Click the <i class="fa-solid fa-plug"></i> plug icon.</li>
-    <li><b>Find the NimoLFM card</b> It sits at the top of the panel. The dot shows whether it's online and whether it's writing a reply right now.</li>
+    <li><b>Find the NimoLFM card</b> It sits at the top of the panel. The dot shows whether it's online and how many replies it's writing right now.</li>
     <li><b>Press "Use NimoLFM"</b> NimoTavern fills in the connection and settings for you and connects. When it says <i>Profile applied and connected</i>, you're done.</li>
     <li><b>Chat</b> Pick a character and send a message as usual.</li>
 </ol>
@@ -69,7 +69,7 @@
     <li><b>Mostly English.</b> Other languages are hit and miss.</li>
     <li><b>It writes fiction.</b> Don't rely on it for facts, advice or anything serious.</li>
     <li><b>Replies are capped</b> at 2,048 tokens, thinking included.</li>
-    <li><b>One reply at a time.</b> NimoLFM writes one reply at a time for everyone. When it's busy, your message waits in line, usually a few seconds. Fair use: up to 40 messages a minute and one reply at a time per account.</li>
+    <li><b>Two replies at a time.</b> NimoLFM writes two replies at the same time for everyone. When both are busy, your message waits in line, usually a few seconds. Fair use: up to 40 messages a minute and one reply at a time per account.</li>
     <li><b>Best effort.</b> NimoLFM runs on one machine run by the Nimo team. It can be offline for maintenance or restarts. When that happens the card says so.</li>
 </ul>
 
@@ -86,7 +86,7 @@
 <div class="wk-tablewrap"><table>
 <tr><th>What you see</th><th>What to do</th></tr>
 <tr><td>The card says <b>Offline right now</b></td><td>The model machine is down or restarting. Try again in a few minutes, or switch back to your own API.</td></tr>
-<tr><td><b>Busy: your message will wait in line</b></td><td>It's writing someone else's reply. Yours starts as soon as it's done.</td></tr>
+<tr><td><b>Busy: your message will wait in line</b></td><td>It's writing two other replies. Yours starts as soon as one is done.</td></tr>
 <tr><td><b>Your NimoLFM session expired</b></td><td>Reload NimoTavern. The access key refreshes on its own, and again before each message if it is about to run out.</td></tr>
 <tr><td><b>The profile isn't fully applied yet</b></td><td>Press <b>Try again</b> on the card. If it keeps failing, switch back to your own API and on again.</td></tr>
 <tr><td>The reply is a strange rule or instruction instead of a roleplay answer</td><td>That text is coming from a preset, a character card or an extension, and a small model can repeat it back. NimoLFM already pauses your preset and card prompt overrides; if it still happens, check the card's description and any extensions that add prompts, and remove the instruction.</td></tr>

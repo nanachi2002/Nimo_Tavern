@@ -176,7 +176,7 @@
         if (!status.online) return '<span class="nimolfm-dot off"></span> Offline right now, try again soon';
         const busy = status.busy ?? 0, slots = status.slots ?? 1;
         return busy >= slots ? '<span class="nimolfm-dot busy"></span> Busy: your message will wait a moment in line'
-            : `<span class="nimolfm-dot on"></span> Online · ${busy ? 'writing a reply, yours will be next' : 'ready'}`;
+            : `<span class="nimolfm-dot on"></span> Online · ${busy ? `${busy} of ${slots} replies being written` : 'ready'}`;
     }
     function render() {
         const c = cfg();
@@ -208,7 +208,7 @@
                     <li>It reads up to <b>${CTX.toLocaleString('en-US')} tokens</b> of context, but works best when the key facts are in the character card or recent messages. Write habits and quirks as short rules ("Always…", "Never…"), not as descriptions.</li>
                     <li>It can repeat itself, invent details or contradict the story. Swipe or edit when it does.</li>
                     <li>It writes best in English. Thinking plus the reply are capped at 2,048 tokens.</li>
-                    <li>One reply is written at a time for everyone. When it's busy your message waits in line, usually a few seconds. Fair use: up to 40 messages a minute and one reply at a time per account.</li>
+                    <li>Two replies are written at the same time for everyone. When both are busy, your message waits in line, usually a few seconds. Fair use: up to 40 messages a minute and one reply at a time per account.</li>
                     <li>It writes fiction. Don't rely on it for facts, advice or anything serious.</li>
                 </ul>
                 <p><a href="/wiki/nimolfm" target="_blank" rel="noopener">Read the full guide</a></p>
