@@ -5,11 +5,11 @@
     const KEY = 'nimolfm';
     const API = '/api/nimo/lfm';
     const MODEL = 'lfm3-rp';
-    const CTX = 86000;
+    const CTX = 67000;
     // Locked sampler profile (tuned on the model itself: these values gave the best format/length compliance).
     const PROFILE = { temp_openai: 0.8, top_p_openai: 1, min_p_openai: 0.06, repetition_penalty_openai: 1.06,
-        freq_pen_openai: 0, pres_pen_openai: 0, openai_max_tokens: 450, openai_max_context: CTX };
-    // A 1.7B model does badly with prompts written for big models (jailbreaks, "thinking" rules, huge instructions): it can
+        freq_pen_openai: 0, pres_pen_openai: 0, openai_max_tokens: 1500, openai_max_context: CTX };
+    // A small model does badly with prompts written for big models (jailbreaks, "thinking" rules, huge instructions): it can
     // even repeat them back as its reply. So while NimoLFM is on we use SillyTavern's plain built-in preset and ignore the
     // system prompt / post-history instructions that character cards bring along. The user's own choices are restored on switch-back.
     // Users can save over "Default" (people paste big presets into it), so NimoLFM keeps its OWN preset, rewritten once per page
@@ -30,11 +30,12 @@
     }
     // "Start Reply With" (Advanced Formatting) is sent as the beginning of the AI's reply, so the model continues whatever it
     // says; presets made for big models often put "thinking" rules there, which then show up as the reply. Cleared while on.
-    // NimoLFM never "thinks", so reasoning auto-parse is off too: otherwise a stray <think> puts the whole reply in the thinking box.
-    const FLAGS = { prefer_character_prompt: false, prefer_character_jailbreak: false, start_reply_with: '', reasoning_auto_parse: false };
+    // NimoLFM thinks before it answers: the server sends the thinking separately (shown in the thinking box), so the reply text is never
+    // parsed for <think> tags (auto-parse off) and "show thoughts" is on.
+    const FLAGS = { prefer_character_prompt: false, prefer_character_jailbreak: false, start_reply_with: '', reasoning_auto_parse: false, openai_show_thoughts: true };
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const LOCKED_IDS = ['chat_completion_source', 'custom_api_url_text', 'custom_model_id', 'api_key_custom', 'settings_preset_openai',
-        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse',
+        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse', 'openai_show_thoughts',
         'temp_openai', 'temp_counter_openai', 'top_p_openai', 'top_p_counter_openai', 'min_p_openai', 'min_p_counter_openai',
         'repetition_penalty_openai', 'rep_pen_counter_openai', 'freq_pen_openai', 'freq_pen_counter_openai', 'pres_pen_openai',
         'pres_pen_counter_openai', 'openai_max_context', 'openai_max_context_counter', 'custom_prompt_post_processing'];
@@ -53,7 +54,7 @@
     }
     const getVal = (id) => { const e = $el(id); return !e ? null : e.type === 'checkbox' ? e.checked : e.value; };
     const SAVE_IDS = ['main_api', 'chat_completion_source', 'custom_api_url_text', 'custom_model_id', 'settings_preset_openai', 'stream_toggle',
-        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse', ...Object.keys(PROFILE)];
+        'prefer_character_prompt', 'prefer_character_jailbreak', 'start_reply_with', 'reasoning_auto_parse', 'openai_show_thoughts', ...Object.keys(PROFILE)];
     // The preset dropdown's option VALUES are numbers; the preset NAME is the option's label.
     const presetOpt = (name) => [...($el('settings_preset_openai')?.options || [])].find((o) => (o.text || '').trim() === name);
     const presetName = () => { const s = $el('settings_preset_openai'); return s && s.selectedIndex >= 0 ? (s.options[s.selectedIndex].text || '').trim() : null; };
@@ -173,9 +174,9 @@
     function statusHtml() {
         if (!status) return '<span class="nimolfm-dot off"></span> Checking…';
         if (!status.online) return '<span class="nimolfm-dot off"></span> Offline right now, try again soon';
-        const busy = status.busy ?? 0, slots = status.slots ?? 3;
+        const busy = status.busy ?? 0, slots = status.slots ?? 1;
         return busy >= slots ? '<span class="nimolfm-dot busy"></span> Busy: your message will wait a moment in line'
-            : `<span class="nimolfm-dot on"></span> Online · ${busy} of ${slots} lanes in use`;
+            : `<span class="nimolfm-dot on"></span> Online · ${busy ? 'writing a reply, yours will be next' : 'ready'}`;
     }
     function render() {
         const c = cfg();
@@ -189,7 +190,7 @@
         card.className = c.enabled ? 'on' : '';
         card.innerHTML = `
             <div class="nimolfm-head"><span class="nimolfm-name"><i class="fa-solid fa-feather-pointed"></i> NimoLFM</span><span class="nimolfm-badge">Free</span><span class="nimolfm-badge alt">Made for NimoTavern</span></div>
-            <p class="nimolfm-lead">A small roleplay model fine-tuned by the Nimo team for NimoTavern. No API key, no account elsewhere, nothing to pay.</p>
+            <p class="nimolfm-lead">A free roleplay AI hosted by the Nimo team for NimoTavern. It thinks before it answers. No API key, no account elsewhere, nothing to pay.</p>
             <div id="nimolfm-status" class="nimolfm-status">${statusHtml()}</div>
             <div class="nimolfm-actions">${c.enabled
                 ? '<div class="menu_button" id="nimolfm-off"><i class="fa-solid fa-unlock"></i> Switch back to my own API</div>'
@@ -198,16 +199,16 @@
             ${c.enabled ? (() => { const bad = check(); return bad.length ? `<p class="nimolfm-warn"><i class="fa-solid fa-triangle-exclamation"></i> The profile isn't fully applied yet:<br>${bad.map((b) => '• ' + b.replace(/</g, '&lt;')).join('<br>')}<br><span class="menu_button" id="nimolfm-retry">Try again</span></p>` : '<p class="nimolfm-ok"><i class="fa-solid fa-circle-check"></i> Profile applied and connected.</p>'; })() : ''}
             <details class="nimolfm-more"><summary>About, privacy and limits</summary>
                 <h4>What it is</h4>
-                <p>NimoLFM is <b>LiquidAI LFM3-1.7B-Base</b> (Liquid AI, <a href="https://huggingface.co/LiquidAI/LFM3-1.7B-Base" target="_blank" rel="noopener">LFM Open License v1.0</a>) that the Nimo team fine-tuned on multi-turn roleplay, prose, long character cards and lorebooks. It is free for anyone using NimoTavern.</p>
+                <p>NimoLFM now runs <b>Gemma 4 E4B</b> by Google (<a href="https://ai.google.dev/gemma/terms" target="_blank" rel="noopener">Gemma Terms of Use</a>), in an uncensored community version (HauhauCS "Aggressive"), with settings, reply rules and guards tuned by the Nimo team for roleplay. It thinks before it answers. It is free for anyone using NimoTavern.</p>
                 <h4>Privacy</h4>
                 <p>Your messages go from your browser to our server, which passes them straight to the model and streams the reply back. We don't store them, log them or send them anywhere else, and there is no telemetry or analytics on what you write. Chats stay encrypted in your account as usual.</p>
                 <h4>Limits (please read)</h4>
                 <ul>
-                    <li><b>It is a small model (1.7 billion parameters).</b> It writes good scenes but is weaker than big paid models at tangled plots, long-term consistency, maths, code and obscure facts.</li>
+                    <li><b>It is a small model</b> (about 4 billion effective parameters). It writes vivid scenes but is weaker than big paid models at tangled plots, long-term consistency, maths, code and obscure facts.</li>
                     <li>It reads up to <b>${CTX.toLocaleString('en-US')} tokens</b> of context, but works best when the key facts are in the character card or recent messages. Write habits and quirks as short rules ("Always…", "Never…"), not as descriptions.</li>
                     <li>It can repeat itself, invent details or contradict the story. Swipe or edit when it does.</li>
-                    <li>Mostly English. Replies are capped at 1,024 tokens.</li>
-                    <li>Fair use: up to 40 messages a minute and 2 replies at once per account. When it's busy your message waits in line.</li>
+                    <li>It writes best in English. Thinking plus the reply are capped at 2,048 tokens.</li>
+                    <li>One reply is written at a time for everyone. When it's busy your message waits in line, usually a few seconds. Fair use: up to 40 messages a minute and one reply at a time per account.</li>
                     <li>It writes fiction. Don't rely on it for facts, advice or anything serious.</li>
                 </ul>
                 <p><a href="/wiki/nimolfm" target="_blank" rel="noopener">Read the full guide</a></p>

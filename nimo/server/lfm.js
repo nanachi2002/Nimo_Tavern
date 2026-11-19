@@ -1,5 +1,5 @@
 // NimoLFM gateway: /api/nimo/lfm/*
-// Lets logged-in NimoTavern users talk to NimoLFM, the free roleplay model the Nimo team fine-tuned and hosts.
+// Lets logged-in NimoTavern users talk to NimoLFM, the free roleplay model the Nimo team hosts (now Gemma 4 E4B, uncensored, with thinking).
 // The model server (llama.cpp) lives on the private network and is never exposed to the internet: this is the only way in.
 //
 // Privacy rules (same as the rest of this server):
@@ -18,12 +18,12 @@ const TOKEN_TTL_MS = 6 * 3600_000;
 const MODEL_ID = 'lfm3-rp';          // internal alias on the model server
 export const LFM = {
     name: 'NimoLFM',
-    base: 'LiquidAI LFM3-1.7B-Base',
-    context: 86_000,                 // tokens per chat the server guarantees
-    maxReply: 1024,                  // tokens per reply
-    defaultReply: 400,
+    base: 'Gemma 4 E4B (uncensored, HauhauCS Aggressive, IQ4_XS)',
+    context: 67_000,                 // tokens per chat the server guarantees
+    maxReply: 2048,                  // tokens per reply, thinking included
+    defaultReply: 1500,
 };
-const MAX_CHARS = 330_000;           // ~86K tokens of English; the model server would refuse more anyway
+const MAX_CHARS = 255_000;           // ~67K tokens of English; the model server would refuse more anyway
 const MAX_MESSAGES = 3000;
 
 // Same text as the extension's rules (variant "X10"); keep the two in sync.
@@ -32,7 +32,7 @@ const REACT_MARK = 'First react directly to';
 const replyRules = (ch, who) => { const user = userNames(who)[0] || who; return `[Only ${ch} acts in this reply: ${who} is played by the user, so never write what ${user} says, does, thinks or feels. First react directly to ${user}'s last message above: answer what ${user} said and respond to what ${user} did. ${RULES_MARK}, about 150 words in total, with concrete detail and fresh wording (never reuse sentences from earlier replies). Every reply uses both marks: *actions and scenery in asterisks* and "every spoken word in double quotes", for example: *She leans closer.* "Tell me more." Paragraph 1: *${ch} reacts to what ${user} just did.* Paragraph 2: ${ch} answers ${user} in "quotes" with a short *gesture*. Paragraph 3: *what ${ch} feels or notices*. No emoji, no out-of-character notes. Remember: ${user} belongs to the user, so never write ${user}'s words, actions or feelings.]`; };
 
 // ---- "Never write for the user", enforced.
-// The rules alone still let a 1.7B model narrate the user's persona now and then. So the reply is checked sentence by sentence
+// The rules alone still let a small model narrate the user's persona now and then. So the reply is checked sentence by sentence
 // BEFORE it is sent: a sentence that makes the user act or speak is thrown away and the model rewrites from the last good
 // sentence (the good part is sent back as the start of its reply). Nothing written for the user reaches the screen.
 const NAMES_RE = /Write (.{1,60}?)'s next reply in a fictional chat between .{1,60}? and (.{1,60}?)\./;
@@ -134,7 +134,7 @@ function guardedReply({ up, body, wantStream, violates, check, res, release }) {
     const id = 'chatcmpl-' + crypto.randomBytes(9).toString('base64url'), created = Math.floor(Date.now() / 1000);
     const base = body.messages;
     const lastIsAssistant = base[base.length - 1].role === 'assistant';      // "Continue": the reply goes on from that message
-    let sent = '', rewrites = 0, done = false, current = null, started = false;
+    let sent = '', thought = '', rewrites = 0, done = false, current = null, started = false;
     const why = [];                          // counts only, for the log line (never text)
     const words = (s) => (s.match(/\S+/g) || []).length;
     const chunk = (delta, finish = null) => 'data: ' + JSON.stringify({ id, object: 'chat.completion.chunk', created, model: MODEL_ID, choices: [{ index: 0, delta, finish_reason: finish }] }) + '\n\n';
@@ -151,7 +151,7 @@ function guardedReply({ up, body, wantStream, violates, check, res, release }) {
         console.log(`[nimolfm] reply words=${words(sent)} cuts=${why.join(',') || 'none'}`);
         try { current?.destroy(); } catch {}
         if (wantStream) { begin(); res.write(chunk({}, 'stop')); res.end('data: [DONE]\n\n'); }
-        else res.json({ id, object: 'chat.completion', created, model: MODEL_ID, choices: [{ index: 0, message: { role: 'assistant', content: sent.trimEnd() }, finish_reason: 'stop' }] });
+        else res.json({ id, object: 'chat.completion', created, model: MODEL_ID, choices: [{ index: 0, message: { role: 'assistant', content: sent.trimEnd(), ...(thought ? { reasoning_content: thought } : {}) }, finish_reason: 'stop' }] });
     }
     function fail(code, json) {
         if (started || sent) return finish();
@@ -166,7 +166,9 @@ function guardedReply({ up, body, wantStream, violates, check, res, release }) {
             : base;
         const left = body.max_tokens - Math.round(words(sent) * 1.4);
         if (left < 24) return finish();
-        const payload = Buffer.from(JSON.stringify({ ...body, messages, max_tokens: left, stream: true }));
+        // a rewrite continues the reply text itself, so it must not start thinking again
+        const extra = sent ? { chat_template_kwargs: { enable_thinking: false } } : {};
+        const payload = Buffer.from(JSON.stringify({ ...body, ...extra, messages, max_tokens: left, stream: true }));
         let pending = '', cut = false;
         const uq = current = http.request({ host: up.hostname, port: up.port, path: '/v1/chat/completions', method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': payload.length }, timeout: 600_000 }, (ur) => {
@@ -212,7 +214,12 @@ function guardedReply({ up, body, wantStream, violates, check, res, release }) {
                     const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1);
                     if (!line.startsWith('data:')) continue;
                     const d = line.slice(5).trim(); if (d === '[DONE]') continue;
-                    try { const t = JSON.parse(d).choices?.[0]?.delta?.content; if (t) feed(t); } catch {}
+                    try {
+                        const delta = JSON.parse(d).choices?.[0]?.delta || {};
+                        // the thinking goes straight to the thinking box: never guarded, never part of the reply text
+                        if (delta.reasoning_content) { thought += delta.reasoning_content; if (wantStream) { begin(); res.write(chunk({ reasoning_content: delta.reasoning_content })); } }
+                        if (delta.content) feed(delta.content);
+                    } catch {}
                     if (cut || done) return;
                 }
             });
@@ -353,8 +360,12 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
             const m = sys.match(/Write (.{1,60}?)'s next reply in a fictional chat between .{1,60}? and (.{1,60}?)\./);
             lastUser.content += '\n\n' + replyRules(m ? m[1] : 'the character', m ? m[2] : 'the user');
         }
+        // Gemma 4 decides by itself whether to think, and with our detailed reply rules it almost never did (0/5 in tests).
+        // This line in the system prompt makes it think every time (5/5).
+        const THINK = 'Always think before you reply: plan the character\'s reaction, feelings and next move in your thoughts first, then write the reply.';
+        if (messages[0].role === 'system') messages[0].content += '\n\n' + THINK; else messages.unshift({ role: 'system', content: THINK });
         if (chars > MAX_CHARS) return res.status(413).json({ error: `This chat is longer than NimoLFM's ${LFM.context.toLocaleString('en-US')}-token limit. Shorten the context size or trim the chat.` });
-        if ((inflight.get(uid) || 0) >= 2) return res.status(429).json({ error: 'You already have two replies being written. Wait for one to finish.' });
+        if ((inflight.get(uid) || 0) >= 1) return res.status(429).json({ error: 'NimoLFM is already writing a reply for you. Wait for it to finish.' });
 
         // Only these parameters ever reach the model, each clamped to a sane range.
         const body = {
@@ -370,6 +381,7 @@ export function createLfmRoutes({ requireSession, limit, wrap, secret, count = (
             // DRY sampler, fixed on our side: stops the model echoing earlier replies in long chats. In multi-turn tests it cut
             // repeated 4-word phrases from 55% to 10% and identical reply openings from 33% to 0%.
             dry_multiplier: 0.8, dry_base: 1.75, dry_allowed_length: 3, dry_penalty_last_n: 4096,
+            chat_template_kwargs: { enable_thinking: true },      // Gemma 4 thinks first; the thinking comes back separately (reasoning_content)
         };
         if (Array.isArray(b.stop)) body.stop = b.stop.filter((s) => typeof s === 'string' && s.length && s.length <= 40).slice(0, 4);
 
